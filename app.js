@@ -124,14 +124,12 @@ function render() {
       ${l.open.length && !l.regular ? `<div class="note" style="margin:8px 0 0">🔁 보강 수업 같아요 · ${label(l.open[0].event_date)} 결석분</div>` : ""}
       <div class="row3"><button class="btn pri" data-i="${i}" data-a="log">${l.log ? "일지 수정" : "출석 · 일지"}</button><button class="btn" data-i="${i}" data-a="abs">결석</button><button class="btn" data-i="${i}" data-a="mk">보강</button></div></div>`;
   });
-  h += `<div class="sec" id="sec">🔒 보안 확인 중…</div>`;
   $("#main").innerHTML = h;
   $("#prev").onclick = () => { cur.setDate(cur.getDate() - 1); load(); };
   $("#next").onclick = () => { cur.setDate(cur.getDate() + 1); load(); };
   if ($("#tf")) $("#tf").onchange = e => { TEACHER_FILTER = e.target.value; load(); };
   document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { cur = new Date(b.dataset.go + "T00:00:00"); load(); });
   document.querySelectorAll("[data-a]").forEach(b => b.onclick = () => ({ log: logForm, abs: absForm, mk: mkForm })[b.dataset.a](DAY.list[+b.dataset.i]));
-  securityCheck();
 }
 const head = (l, t) => `<p><button class="btn" id="bk">‹ 목록</button></p><div class="card"><h1>${esc(l.name)} ${t}</h1><div class="m">${label(DAY.day)} ${esc(l.time)} · ${l.min}분</div>`;
 const back = () => { render(); window.scrollTo(0, 0); };
@@ -212,17 +210,6 @@ function mkForm(l) {
   };
   document.querySelectorAll("[data-o]").forEach(b => b.onclick = () => go(l.open[+b.dataset.o].event_date, l.min));
   $("#save").onclick = () => $("#link").value ? go($("#link").value, $("#min").value) : toast("원래 수업일을 골라 주세요");
-}
-
-// ===== 보안 확인: 이 계정으로 원장 전용 표가 보이는지 직접 시험 =====
-async function securityCheck() {
-  const tables = [["payments", "수납"], ["fee_changes", "원비"], ["consults", "상담"], ["money", "수입지출"], ["payroll_actual", "강사 급여"]];
-  const res = await Promise.all(tables.map(async ([t, n]) => { const { data, error } = await db.from(t).select("*", { count: "exact", head: false }).limit(1); return [n, error ? 0 : data.length]; }));
-  const { count } = await db.from("students").select("id", { count: "exact", head: true });
-  const leak = res.filter(([, c]) => c > 0);
-  $("#sec").innerHTML = ME.role === "teacher"
-    ? `🔒 보안 확인 · 볼 수 있는 학생 ${count ?? 0}명 · 원장 전용(${tables.map(t => t[1]).join("·")}) ${leak.length ? `<b class="bad">보임: ${leak.map(x => x[0]).join(", ")}</b>` : `<b class="ok">모두 차단됨 ✓</b>`}`
-    : `🔑 관리자 계정 · 학생 ${count ?? 0}명 · 원장 전용 표 ${leak.length}/${tables.length}개 읽기 가능`;
 }
 
 boot().catch(e => { $("#main").innerHTML = `<div class="warn">연결 오류: ${esc(e.message)}</div>`; });
