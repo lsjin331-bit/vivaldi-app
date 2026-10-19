@@ -55,8 +55,9 @@ async function payrollView() {
   // 지금 강사 + 그 달에 수업·실지급이 있었던 예전 강사(이수경 등: 강사표에 없어 계산 제외, 실지급만)
   // 체험 수업(분홍): 30분 단가대로 지급(9월 급여지급표 확인: 권입분·임예진·신수빈). 같은 날 시간표 칸이 있으면 그 칸으로 이미 셈
   ev.filter(e => e.kind === "체험" && e.form === "개인").forEach(e => {
-    const s = S[e.student_id]; if (!s || byDay[e.student_id + "|" + e.event_date]) return;
-    add(e.teacher_id || teacherOn(s, e.event_date), "normal", e.minutes || 30, `${label(e.event_date)} ${s.name} 체험 ${e.minutes || 30}분`);
+    const s = S[e.student_id];   // 등록 전 체험생은 학생 없이 선생님만(이름은 메모 앞)
+    if (s ? byDay[e.student_id + "|" + e.event_date] : !e.teacher_id) return;
+    add(e.teacher_id || teacherOn(s, e.event_date), "normal", e.minutes || 30, `${label(e.event_date)} ${s ? s.name : (e.memo || "").split(" · ")[0]} 체험 ${e.minutes || 30}분`);
   });
   const staff = d.staff.filter(s => s.role !== "owner" && ((s.pay_kind !== "none" && s.active !== false) || T[s.id] || actual.some(a => a.staff_id === s.id)));
   const rows = staff.map(st => {
