@@ -138,3 +138,9 @@ body.owner .tag{border-radius:5px;font-size:11px;font-weight:700}
   .subt button.on{color:var(--blue);border-bottom-color:var(--blue)}
   body.owner main{margin-left:0;padding:16px 14px 70px}body.owner .nav h1{font-size:22px}
 }
+
+/* 운영 현황 */
+.ovg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:4px}.ovg .card{margin:0}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}.tbl th{font-size:11px;color:#8791a2;font-weight:600;text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+.tbl td{padding:7px 8px;border-bottom:1px solid #f1f3f7;font-variant-numeric:tabular-nums}.tbl td:not(:first-child),.tbl th:not(:first-child){text-align:right}
+@media (max-width:899px){.ovg{grid-template-columns:1fr}}

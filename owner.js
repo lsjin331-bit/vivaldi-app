@@ -9,7 +9,7 @@ let O = { tab: "home", month: thisMonth(), data: null, filter: "재원", inst: "
 // 왼쪽 묶음 메뉴 + 하위 탭 (원장 결정 2026-10-20: 기존 운영실 앱 · Polaris · 학원 OS 구성)
 // 메뉴: 업무 단위로 묶음 → 화면 (ARCO 구성 · 선 아이콘)
 const MENU = [
-  { k: "ops", t: "대시보드", sub: [["home", "오늘의 학원", "dashboard"], ["calendar", "일정 · 업무 일지", "calendar"]] },
+  { k: "ops", t: "대시보드", sub: [["home", "오늘의 학원", "dashboard"], ["overview", "운영 현황", "money"], ["calendar", "일정 · 업무 일지", "calendar"]] },
   { k: "stu", t: "원생", sub: [["students", "원생 관리", "students"], ["attend", "출결 관리", "attendance"], ["lessons", "수업 · 레슨 일지", "classes"]] },
   { k: "fee", t: "수납", sub: [["tuition", "수업료 · 미납", "fees"]] },
   { k: "grow", t: "성장", sub: [["consult", "상담 CRM", "crm"], ["marketing", "마케팅", "content"]] },
@@ -56,7 +56,7 @@ async function go(tab) {
   if (tab === "lessons") return load();          // 선생님 화면(선생님 골라 보기)
   $("#main").innerHTML = `<div class="loading">불러오는 중…</div>`;
   try { await loadAll(); // 화면 함수는 이름으로 찾음(다른 파일이 아직 안 읽혔을 때 '정의되지 않음' 오류가 나지 않게, 잠깐 기다렸다 다시 찾음)
-    const fn = { home: "homeView", students: "studentsView", tuition: "tuitionView", attend: "attendView", consult: "consultView", payroll: "payrollView", money: "moneyView", calendar: "calendarView", marketing: "marketingView" }[tab];
+    const fn = { home: "homeView", overview: "overviewView", students: "studentsView", tuition: "tuitionView", attend: "attendView", consult: "consultView", payroll: "payrollView", money: "moneyView", calendar: "calendarView", marketing: "marketingView" }[tab];
     for (let i = 0; i < 20 && typeof window[fn] !== "function"; i++) await new Promise(r => setTimeout(r, 100));
     await window[fn](); }
   catch (e) { $("#main").innerHTML = `<div class="warn">불러오지 못했어요: ${esc(e.message)}</div>`; }
