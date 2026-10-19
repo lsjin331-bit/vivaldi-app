@@ -125,6 +125,7 @@ function homeView() {
     </div>
     ${diagCard(act, m)}
     <h2 class="sec2">확인할 것</h2>
+    <div id="autochk"></div>
     ${todayLogsCard()}${stagnationCard()}
     ${unpaid.length ? `<div class="card clickable" data-go="tuition"><b>미납 ${unpaid.length}명</b><div class="m">${unpaid.map(x => esc(x.s.name)).join(", ")}</div></div>` : ""}
     ${follow.length ? `<div class="card"><b>상담 후속 연락 ${follow.length}건</b><div class="m">${follow.map(c => esc(c.name) + " (" + c.follow_on.slice(5).replace("-", "/") + ")").join(", ")}</div></div>` : ""}
@@ -132,6 +133,38 @@ function homeView() {
     ${!unpaid.length && !follow.length && !noMk.length ? `<div class="card m">오늘 확인할 것이 없어요 </div>` : ""}
     <p class="m" style="margin-top:14px">자료는 매일 밤 시트에서 복사돼요. 지금은 시트가 원본이라 새 앱에서 바꾼 내용은 시트에 자동으로 들어가지 않아요.</p>`;
   bindMonth(); document.querySelectorAll("[data-go]").forEach(c => c.onclick = () => go(c.dataset.go));
+  autoChecks();
+}
+// 자동 대조 (원장 요청 2026-10-20: 네 곳이 어긋나면 먼저 알려 주기)
+// ① 시간표 알림칸(회차 부족·초과) ② 상담 '등록'인데 원생 명부에 없음 ③ 정규 요일인데 지난 7일 시간표·기록 모두 없음 ④ 앞으로 시간표에 명부에 없는 이름·휴원·퇴원생
+async function autoChecks() {
+  const el = $("#autochk"); if (!el) return;
+  const d = O.data, today = ymd(new Date()), from = addDays(today, -7), to = addDays(today, 21);
+  const [alertRow, cells] = await Promise.all([
+    db.from("settings").select("value").eq("key", "timetable_alert").then(r => (r.data || [])[0]),
+    q(db.from("timetable_cells").select("lesson_date,student_id,is_group,raw_text,group_names").gte("lesson_date", from).lte("lesson_date", to))
+  ]);
+  const items = [], S = Object.fromEntries(d.students.map(s => [s.id, s])), names = new Set(d.students.map(s => s.name));
+  const a = alertRow && alertRow.value, ex = (a && a.exclude) || [];
+  if (a && a.check) items.push(["회차", "시간표 회차 확인 (선생님 시간표 알림칸)", a.check.replace(/\n/g, "<br>")]);
+  const regGone = d.consults.filter(c => c.status === "등록" && c.asked_on >= addDays(today, -45) && !names.has(c.name) && !c.with_name);
+  if (regGone.length) items.push(["명부", `상담은 '등록'인데 원생 명부에 없음 ${regGone.length}명`, regGone.map(c => esc(c.name) + " (" + (c.asked_on || "").slice(5).replace("-", "/") + " 상담)").join(", ")]);
+  const hol = new Set((await q(db.from("holidays").select("day").gte("day", from).lte("day", today))).map(h => h.day));
+  const miss = [];
+  for (let day = from; day < today; day = addDays(day, 1)) {
+    if (hol.has(day)) continue;
+    d.slots.filter(x => x.kind === "개인" && x.weekday === wd(day) && (!x.valid_from || x.valid_from <= day) && (!x.valid_to || x.valid_to >= day)).forEach(x => {
+      const s = S[x.student_id]; if (!s || !enrolled(s, day.slice(0, 7)) || (s.start_month && s.start_month > day)) return;
+      if (ex.some(([n, dt]) => n === s.name && (!dt || dt === day))) return;   // 시간표 '알림 제외 학생'(예: 김성훈 10월 2회만)
+      const has = cells.some(c => c.student_id === x.student_id && c.lesson_date === day) || d.events.some(e => e.student_id === x.student_id && e.event_date === day);
+      if (!has) miss.push(`${label(day)} ${esc(s.name)}`);
+    });
+  }
+  if (miss.length) items.push(["시간표", `정규 수업인데 시간표·기록에 없음 ${miss.length}건 (지난 7일)`, miss.join(", ")]);
+  const odd = [...new Set(cells.filter(c => c.lesson_date >= today && !c.is_group && (!c.student_id || (S[c.student_id] && S[c.student_id].status !== "재원"))).map(c => `${label(c.lesson_date)} ${esc(c.student_id ? S[c.student_id].name + "(" + S[c.student_id].status + ")" : (c.raw_text || "").replace(/\(.*$/, ""))}`))];
+  if (odd.length) items.push(["시간표", `앞으로 시간표에 명부에 없거나 휴원·퇴원인 이름 ${odd.length}건`, odd.join(", ")]);
+  el.innerHTML = items.length ? `<div class="card"><b>자동 대조 · 어긋난 곳 ${items.length}가지</b> <span class="m">${a && a.at ? "시간표 알림 " + esc(a.at) + " 기준" : ""}</span>
+    ${items.map(([k, t, x]) => `<div style="margin-top:10px"><span class="tag">${k}</span> <b>${t}</b><div class="m" style="margin-top:2px">${x}</div></div>`).join("")}</div>` : "";
 }
 // 지금 상황 한 줄 진단 (기존 앱 '운영 현황'과 같은 내용): 재원 증감 · 상담→등록 · 유입경로 모름
 function diagCard(act, m) {
