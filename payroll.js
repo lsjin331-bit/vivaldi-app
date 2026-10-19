@@ -16,7 +16,11 @@ async function payrollView() {
   ]);
   // 급여는 수업한 날짜 기준(9월 정산으로 확인: 8/31 수업은 8월 급여, 9/28 미리 한 10/5분은 9월 급여, 10/2 9월 4회차는 10월 급여)
   // 회차(출결표)만 귀속월(for_month)을 따른다
-  const cells = cells0.filter(c => c.lesson_date >= ms && c.lesson_date <= me), ev = ev0;
+  // 예외: 원장 확인으로 급여 달이 다른 수업은 칸에 [급여 YYYY-MM] (예: 최현희 8/31 = 9월 급여, 9/28 = 10월 급여)
+  const payMonth = c => { const m = (c.raw_text || "").match(/\[급여 (\d{4}-\d{2})\]/); return m ? m[1] + "-01" : c.lesson_date.slice(0, 7) + "-01"; };
+  const cells = cells0.filter(c => payMonth(c) === ms);
+  const outDays = [...new Set(cells.filter(c => c.lesson_date < ms || c.lesson_date > me).map(c => c.lesson_date))];
+  const ev = outDays.length ? ev0.concat(await q(db.from("attendance_events").select("*").in("event_date", outDays))) : ev0;
   const S = Object.fromEntries(d.students.map(s => [s.id, s]));
   // 학생·날짜별 수업 분(시트 표기: '(40')' 같은 명시 분이 있으면 그 값, 없으면 칸 수 × 30)
   const byDay = {};
@@ -43,11 +47,17 @@ async function payrollView() {
   // 당일 취소(보강 없음): 칸이 지워져 있어도 50% 지급
   ev.filter(e => e.form === "개인" && e.kind.startsWith("결석 · 당일 취소")).forEach(e => {
     const s = S[e.student_id]; if (!s) return;
+    if (/급여 없음|미지급/.test(e.memo || "")) return;   // 원장 협의로 예외(예: 장지원 9/5 조윤정)
     const mins = e.minutes || 30;
     add(e.teacher_id || teacherOn(s, e.event_date), "half", mins / 2, `${label(e.event_date)} ${s.name} 당일 취소 ${mins}분 → 50%`);
   });
 
   // 지금 강사 + 그 달에 수업·실지급이 있었던 예전 강사(이수경 등: 강사표에 없어 계산 제외, 실지급만)
+  // 체험 수업(분홍): 30분 단가대로 지급(9월 급여지급표 확인: 권입분·임예진·신수빈). 같은 날 시간표 칸이 있으면 그 칸으로 이미 셈
+  ev.filter(e => e.kind === "체험" && e.form === "개인").forEach(e => {
+    const s = S[e.student_id]; if (!s || byDay[e.student_id + "|" + e.event_date]) return;
+    add(e.teacher_id || teacherOn(s, e.event_date), "normal", e.minutes || 30, `${label(e.event_date)} ${s.name} 체험 ${e.minutes || 30}분`);
+  });
   const staff = d.staff.filter(s => s.role !== "owner" && ((s.pay_kind !== "none" && s.active !== false) || T[s.id] || actual.some(a => a.staff_id === s.id)));
   const rows = staff.map(st => {
     const t = T[st.id] || { normal: 0, half: 0, cover: 0, lines: [] };
@@ -74,7 +84,7 @@ async function payrollView() {
         <div class="m">${r.st.pay_kind === "fixed" ? "월 고정급" : none ? `수업 ${r.mins}분 (참고)` : `수업 ${r.t.normal}분 · 대강 ${r.t.cover}분 · 당일 취소 50% ${r.t.half}분 = ${r.mins}분`}</div>
         <div class="m">3.3% ${won(r.it + r.lt)}원 (소득세 ${won(r.it)} · 지방 ${won(r.lt)}) → 이체 ${won(r.pay - r.it - r.lt)}원</div>
         ${r.act ? `<div class="m">실지급 ${won(r.act.amount)}원${none ? "" : ` · <b style="color:${diff === 0 ? "var(--ok)" : "var(--red)"}">${diff === 0 ? "일치 ✓" : "차이 " + (diff > 0 ? "+" : "") + won(diff) + "원"}</b>`} ${esc(r.act.memo || "")}</div>` : ""}
-        ${r.t.lines.length ? `<details><summary class="m">대강·당일 취소 ${r.t.lines.length}건</summary><div class="m">${r.t.lines.map(esc).join("<br>")}</div></details>` : ""}</div>`;
+        ${r.t.lines.length ? `<details><summary class="m">대강·당일 취소·체험 ${r.t.lines.length}건</summary><div class="m">${r.t.lines.map(esc).join("<br>")}</div></details>` : ""}</div>`;
     }).join("")}
     <h2 class="sec2">원천세 신고 기록</h2>
     <div class="card">${tax.slice(0, 8).map(x => `<div>${x.paid_month.slice(0, 7)} 이체분 · ${esc(x.kind)} · ${esc(x.memo || "")}</div>`).join("") || '<div class="m">없음</div>'}
