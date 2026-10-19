@@ -30,7 +30,7 @@ async function boot() {
   if (!ME) { $("#main").innerHTML = `<div class="warn">이 이메일(${esc(email)})은 선생님 명단에 연결되어 있지 않아요. 원장님께 알려 주세요.</div>`; showLogout(); return; }
   $("#who").textContent = ME.name + (ME.role === "teacher" ? " 선생님" : ME.role === "owner" ? " · 원장" : " · 실장");
   showLogout();
-  if (ME.role !== "teacher") TEACHER_FILTER = TEACHER_FILTER || STAFF.find(s => s.role === "teacher")?.id || ME.id;
+  if (ME.role !== "teacher") { TEACHER_FILTER = TEACHER_FILTER || STAFF.find(s => s.role === "teacher")?.id || ME.id; return ownerBoot(); }
   load();
 }
 function showLogout() { const b = $("#logout"); b.hidden = false; b.onclick = async () => { await db.auth.signOut(); location.reload(); }; }
