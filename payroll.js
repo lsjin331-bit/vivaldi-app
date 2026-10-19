@@ -14,10 +14,9 @@ async function payrollView() {
     q(db.from("payroll_actual").select("*").eq("month", ms)),
     q(db.from("tax_filings").select("*").order("paid_month", { ascending: false }))
   ]);
-  // 이 달 몫 칸만(8/31 = 9월, 9/28 = 10/5분 미리 → 10월). 달 밖 날짜의 결석·대강 기록도 함께 읽는다
-  const cells = cells0.filter(c => cellMonth(c) === ms);
-  const outDays = [...new Set(cells.filter(c => c.lesson_date < ms || c.lesson_date > me).map(c => c.lesson_date))];
-  const ev = outDays.length ? ev0.concat(await q(db.from("attendance_events").select("*").in("event_date", outDays))) : ev0;
+  // 급여는 수업한 날짜 기준(9월 정산으로 확인: 8/31 수업은 8월 급여, 9/28 미리 한 10/5분은 9월 급여, 10/2 9월 4회차는 10월 급여)
+  // 회차(출결표)만 귀속월(for_month)을 따른다
+  const cells = cells0.filter(c => c.lesson_date >= ms && c.lesson_date <= me), ev = ev0;
   const S = Object.fromEntries(d.students.map(s => [s.id, s]));
   // 학생·날짜별 수업 분(시트 표기: '(40')' 같은 명시 분이 있으면 그 값, 없으면 칸 수 × 30)
   const byDay = {};
