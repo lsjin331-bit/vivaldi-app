@@ -48,3 +48,21 @@ body.owner main{max-width:760px}
 .clickable{cursor:pointer}.clickable:hover{border-color:var(--blue)}
 .row2{display:flex;gap:6px;align-items:center}
 .nav h1{text-align:left}
+/* 출결표 */
+body.owner.wide main{max-width:none}
+.attwrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.att{border-collapse:collapse;font-size:11px;width:100%}
+.att th,.att td{border:1px solid var(--line);padding:2px 1px;text-align:center;min-width:20px;height:24px}
+.att thead th{position:sticky;top:0;background:var(--bg);z-index:2;font-weight:600}
+.att th small{font-weight:400;color:var(--ink2)}
+.att .nm{position:sticky;left:0;z-index:1;background:var(--card);text-align:left;min-width:74px;padding:2px 6px;border-left:4px solid var(--c,var(--line))}
+.att thead .nm{z-index:3}
+.att .nm small{display:block;font-size:10px;color:var(--ink2)}
+.att .sun{min-width:8px;width:8px;background:#f1f2f4;color:#aab}
+.att .hol{background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(120,120,120,.18) 4px 5px)}
+.att .grp td{text-align:left;background:var(--soft);color:var(--blue);font-weight:700;padding:4px 8px;position:sticky;left:0}
+.att span{display:block;line-height:1.15;font-weight:700}
+.att .p{color:#9a7424}.att .mk{color:var(--blue)}.att .sub{color:#0f8b8d}.att .g{color:#2f855a}.att .x{color:#d13b3b}.att .a{color:#9aa1ad;font-weight:400}.att .prev{color:#6b7da8;font-size:9px}
+.att .sm{min-width:52px;font-weight:700;white-space:nowrap}
+.att td.full{color:#2f855a;background:#e9f6ee}.att td.short{color:#c27a10;background:#fff4e2}.att td.na{color:#ccc}
+@media (prefers-color-scheme:dark){.att .sun{background:#20252d}.att td.full{background:#16352d}.att td.short{background:#3a2f17}}

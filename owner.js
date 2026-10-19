@@ -6,7 +6,7 @@ const INST_ORDER = ["바이올린", "첼로", "클라리넷", "플룻", "비올�
 const thisMonth = () => ymd(new Date()).slice(0, 7);
 let O = { tab: "home", month: thisMonth(), data: null, filter: "재원", inst: "전체", sel: null };
 
-const TABS = [["home", "홈"], ["students", "학생"], ["tuition", "수납"], ["lessons", "수업"]];
+const TABS = [["home", "홈"], ["attend", "출결표"], ["students", "학생"], ["tuition", "수납"], ["lessons", "수업"]];
 function ownerBoot() { ownerNav(); go(O.tab); }
 function ownerNav() {
   let nav = $("#onav");
@@ -16,15 +16,16 @@ function ownerNav() {
   document.body.classList.add("owner");
 }
 async function go(tab) {
-  O.tab = tab; ownerNav();
+  O.tab = tab; ownerNav(); document.body.classList.toggle("wide", tab === "attend");
   if (tab === "lessons") return load();          // 선생님 화면(선생님 골라 보기)
   $("#main").innerHTML = `<div class="loading">불러오는 중…</div>`;
-  try { await loadAll(); ({ home: homeView, students: studentsView, tuition: tuitionView })[tab](); }
+  try { await loadAll(); await ({ home: homeView, students: studentsView, tuition: tuitionView, attend: attendView })[tab](); }
   catch (e) { $("#main").innerHTML = `<div class="warn">불러오지 못했어요: ${esc(e.message)}</div>`; }
 }
 
 // ===== 자료 한 번에 읽기 =====
 async function loadAll(force) {
+  // (출결표는 달마다 따로 읽음: attendView)
   if (O.data && !force && O.data.at > Date.now() - 60000) return O.data;
   const [students, staff, fees, pays, consults, events, slots, contacts] = await Promise.all([
     q(db.from("students").select("*").order("id")),
