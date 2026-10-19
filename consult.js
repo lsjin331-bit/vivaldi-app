@@ -12,7 +12,7 @@ function consultView() {
   const year = d.consults.filter(c => (c.asked_on || "") >= today.slice(0, 4));
   const reg = year.filter(c => c.status === "등록").length;
   const src = {}; year.forEach(c => { const k = c.source || "미입력"; src[k] = (src[k] || 0) + 1; });
-  $("#main").innerHTML = `<div class="nav"><h1>상담</h1><button class="btn pri" id="cnew">+ 새 상담</button></div>
+  $("#main").innerHTML = `<div class="nav"><h1>상담 CRM</h1><button class="btn pri" id="cnew">+ 새 상담</button></div>
     <div class="kpis">${kpi("올해 상담", year.length + "건", "")}${kpi("등록", reg + "건", year.length ? Math.round(reg / year.length * 100) + "% 전환" : "")}
       ${kpi("후속 연락", d.consults.filter(c => c.follow_on && c.follow_on <= today && !done(c)).length + "건", "오늘까지", "red")}
       ${kpi("유입경로", Object.keys(src).length + "종", Object.entries(src).sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0] + " " + x[1]).join(" · "))}</div>
@@ -74,7 +74,7 @@ function todayLogsCard() {
     if (done) byT[t].done++; else byT[t].miss.push(s.name);
   });
   const lines = Object.entries(byT).map(([t, v]) => `<div>${esc(t)} · 완료 ${v.done}${v.miss.length ? ` · <span style="color:var(--red)">아직 ${v.miss.map(esc).join(", ")}</span>` : " ✔"}</div>`).join("");
-  return `<div class="card"><b>📝 오늘 일지 현황</b> <span class="m">(1시간마다 시트에서 갱신)</span><div class="m" style="margin-top:4px">${lines}</div></div>`;
+  return `<div class="card"><b>오늘 일지 현황</b> <span class="m">(1시간마다 시트에서 갱신)</span><div class="m" style="margin-top:4px">${lines}</div></div>`;
 }
 // 진도 정체: 같은 곡이 6주 넘게 이어지는 학생
 const STAG_DAYS = 42;
@@ -89,5 +89,5 @@ function stagnationCard() {
     const days = Math.round((new Date(ls[0].lesson_date) - new Date(first)) / 864e5);
     if (days >= STAG_DAYS) { const s = d.students.find(x => x.id === sid); if (s) hits.push(`${esc(s.name)} · ${esc(ls[0].piece)} ${Math.floor(days / 7)}주째`); }
   });
-  return hits.length ? `<div class="card"><b>⏳ 진도 정체 ${hits.length}명</b> <span class="m">(같은 곡 ${STAG_DAYS / 7}주 이상)</span><div class="m">${hits.join("<br>")}</div></div>` : "";
+  return hits.length ? `<div class="card"><b>진도 정체 ${hits.length}명</b> <span class="m">(같은 곡 ${STAG_DAYS / 7}주 이상)</span><div class="m">${hits.join("<br>")}</div></div>` : "";
 }

@@ -7,14 +7,27 @@ const thisMonth = () => ymd(new Date()).slice(0, 7);
 let O = { tab: "home", month: thisMonth(), data: null, filter: "재원", inst: "전체", sel: null };
 
 // 왼쪽 묶음 메뉴 + 하위 탭 (원장 결정 2026-10-20: 기존 운영실 앱 · Polaris · 학원 OS 구성)
+// 메뉴: 업무 단위로 묶음 → 화면 (ARCO 구성 · 선 아이콘)
 const MENU = [
-  { k: "home", t: "홈", i: "🏠", sub: [["home", "오늘"], ["calendar", "캘린더 · 일지"]] },
-  { k: "stu", t: "수강생", i: "🎻", sub: [["students", "학생 명부"], ["attend", "출결표"], ["tuition", "수납 · 미납"]] },
-  { k: "con", t: "상담", i: "💬", sub: [["consult", "상담 목록"]] },
-  { k: "mkt", t: "마케팅", i: "📣", sub: [["marketing", "한눈에"]] },
-  { k: "biz", t: "경영", i: "📊", sub: [["payroll", "강사 급여 · 세금"], ["money", "수입·지출 · 재고"]] },
-  { k: "cls", t: "수업", i: "📝", sub: [["lessons", "선생님 화면"]] }
+  { k: "ops", t: "대시보드", sub: [["home", "오늘의 학원", "dashboard"], ["calendar", "일정 · 업무 일지", "calendar"]] },
+  { k: "stu", t: "원생", sub: [["students", "원생 관리", "students"], ["attend", "출결 관리", "attendance"], ["lessons", "수업 · 레슨 일지", "classes"]] },
+  { k: "fee", t: "수납", sub: [["tuition", "수업료 · 미납", "fees"]] },
+  { k: "grow", t: "성장", sub: [["consult", "상담 CRM", "crm"], ["marketing", "마케팅", "content"]] },
+  { k: "fin", t: "재무 · 인사", sub: [["payroll", "강사 급여 · 원천세", "payroll"], ["money", "수입 · 지출 · 재고", "money"]] }
 ];
+const ICON = {   // ARCO 선 아이콘 (24px 기준)
+  dashboard: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',
+  students: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  attendance: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m-13 5 3 3 5-5"/>',
+  classes: '<path d="M9 18V5l12-2v13M9 9l12-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="18" cy="16" rx="3" ry="3"/>',
+  fees: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h3"/>',
+  crm: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3.1 5.2 2 2 0 0 1 5.1 3h3l2 5-2.1 2.1a16 16 0 0 0 5.9 5.9L16 14Z"/>',
+  content: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 7h10M7 11h10M7 15h6"/>',
+  payroll: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6M16 11h6"/>',
+  money: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>'
+};
+const ico = n => `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n] || ""}</svg>`;
 const secOf = tab => MENU.find(m => m.sub.some(s => s[0] === tab)) || MENU[0];
 function ownerBoot() { ownerNav(); go(O.tab); }
 function ownerNav() {
@@ -25,10 +38,14 @@ function ownerNav() {
     const st = document.createElement("div"); st.id = "subt"; st.className = "subt"; $("#main").before(st);
   }
   const sec = secOf(O.tab);
-  side.innerHTML = `<div class="sbrand"><span class="logo">V</span><div><b>VIVALDI</b><small>비발디 운영실</small></div></div>
-    <div class="sbig">${MENU.map(m => `<button data-big="${m.k}" class="${m === sec ? "on" : ""}">${m.i} ${m.t}</button>`).join("")}</div>
-    <div class="sgroups">${MENU.map(m => `<div class="ssec">${m.i} ${m.t}</div>` + m.sub.map(([k, t]) => `<button data-t="${k}" class="${O.tab === k ? "on" : ""}">${t}</button>`).join("")).join("")}</div>
-    <div class="sfoot"><span>${esc(ME ? ME.name + (ME.role === "owner" ? " · 원장" : " · 실장") : "")}</span><button id="slog">로그아웃</button></div>`;
+  side.innerHTML = `<div class="sbrand"><span class="mk">V</span><span>VIVALDI<small>ACADEMY MANAGER</small></span></div>
+    <div class="sbig">${MENU.map(m => `<button data-big="${m.k}" class="${m === sec ? "on" : ""}">${m.t}</button>`).join("")}</div>
+    <div class="sgroups">${MENU.map(m => `<div class="ssec">${m.t}</div>` + m.sub.map(([k, t, ic]) => `<button data-t="${k}" class="${O.tab === k ? "on" : ""}">${ico(ic)}<span>${t}</span></button>`).join("")).join("")}</div>
+    <div class="sfoot"><div class="dot"></div><div>${esc(ME ? ME.name + (ME.role === "owner" ? " · 원장" : " · 실장") : "")}<small>Supabase 서버에 저장</small></div><button id="slog">로그아웃</button></div>`;
+  let top = $("#otop");
+  if (!top) { top = document.createElement("header"); top.id = "otop"; top.className = "otop"; $("#subt").before(top); }
+  const d0 = new Date();
+  top.innerHTML = `<div class="ac"><span class="tl"></span>비발디 관현악학원</div><div class="rt">${d0.getMonth() + 1}월 ${d0.getDate()}일 (${"일월화수목금토"[d0.getDay()]})<div class="av">${esc((ME && ME.name || "원").slice(0, 1))}</div></div>`;
   $("#subt").innerHTML = sec.sub.length > 1 ? sec.sub.map(([k, t]) => `<button data-t="${k}" class="${O.tab === k ? "on" : ""}">${t}</button>`).join("") : "";
   document.querySelectorAll("#side [data-t], #subt [data-t]").forEach(b => b.onclick = () => go(b.dataset.t));
   side.querySelectorAll("[data-big]").forEach(b => b.onclick = () => go(MENU.find(m => m.k === b.dataset.big).sub[0][0]));
@@ -38,7 +55,10 @@ async function go(tab) {
   O.tab = tab; ownerNav(); document.body.classList.toggle("wide", tab === "attend");
   if (tab === "lessons") return load();          // 선생님 화면(선생님 골라 보기)
   $("#main").innerHTML = `<div class="loading">불러오는 중…</div>`;
-  try { await loadAll(); await ({ home: homeView, students: studentsView, tuition: tuitionView, attend: attendView, consult: consultView, payroll: payrollView, money: moneyView, calendar: calendarView, marketing: marketingView })[tab](); }
+  try { await loadAll(); // 화면 함수는 이름으로 찾음(다른 파일이 아직 안 읽혔을 때 '정의되지 않음' 오류가 나지 않게, 잠깐 기다렸다 다시 찾음)
+    const fn = { home: "homeView", students: "studentsView", tuition: "tuitionView", attend: "attendView", consult: "consultView", payroll: "payrollView", money: "moneyView", calendar: "calendarView", marketing: "marketingView" }[tab];
+    for (let i = 0; i < 20 && typeof window[fn] !== "function"; i++) await new Promise(r => setTimeout(r, 100));
+    await window[fn](); }
   catch (e) { $("#main").innerHTML = `<div class="warn">불러오지 못했어요: ${esc(e.message)}</div>`; }
 }
 
@@ -104,12 +124,12 @@ function homeView() {
       ${kpi("이달 상담", cMonth.length + "건", "등록 " + cMonth.filter(c => /등록/.test(c.status || "") && !/미등록/.test(c.status || "")).length + "건")}
     </div>
     ${diagCard(act, m)}
-    <h2 class="sec2">✅ 확인할 것</h2>
+    <h2 class="sec2">확인할 것</h2>
     ${todayLogsCard()}${stagnationCard()}
-    ${unpaid.length ? `<div class="card clickable" data-go="tuition"><b>💳 미납 ${unpaid.length}명</b><div class="m">${unpaid.map(x => esc(x.s.name)).join(", ")}</div></div>` : ""}
-    ${follow.length ? `<div class="card"><b>📞 상담 후속 연락 ${follow.length}건</b><div class="m">${follow.map(c => esc(c.name) + " (" + c.follow_on.slice(5).replace("-", "/") + ")").join(", ")}</div></div>` : ""}
-    ${noMk.length ? `<div class="card"><b>🔁 보강 날짜 없는 결석 ${noMk.length}건</b><div class="m">${noMk.map(e => esc(name(e.student_id)) + " " + label(e.event_date)).join(", ")}</div></div>` : ""}
-    ${!unpaid.length && !follow.length && !noMk.length ? `<div class="card m">오늘 확인할 것이 없어요 👍</div>` : ""}
+    ${unpaid.length ? `<div class="card clickable" data-go="tuition"><b>미납 ${unpaid.length}명</b><div class="m">${unpaid.map(x => esc(x.s.name)).join(", ")}</div></div>` : ""}
+    ${follow.length ? `<div class="card"><b>상담 후속 연락 ${follow.length}건</b><div class="m">${follow.map(c => esc(c.name) + " (" + c.follow_on.slice(5).replace("-", "/") + ")").join(", ")}</div></div>` : ""}
+    ${noMk.length ? `<div class="card"><b>보강 날짜 없는 결석 ${noMk.length}건</b><div class="m">${noMk.map(e => esc(name(e.student_id)) + " " + label(e.event_date)).join(", ")}</div></div>` : ""}
+    ${!unpaid.length && !follow.length && !noMk.length ? `<div class="card m">오늘 확인할 것이 없어요 </div>` : ""}
     <p class="m" style="margin-top:14px">자료는 매일 밤 시트에서 복사돼요. 지금은 시트가 원본이라 새 앱에서 바꾼 내용은 시트에 자동으로 들어가지 않아요.</p>`;
   bindMonth(); document.querySelectorAll("[data-go]").forEach(c => c.onclick = () => go(c.dataset.go));
 }
@@ -122,13 +142,17 @@ function diagCard(act, m) {
   const cm = cs(m), cp = cs(pm), reg = a => a.filter(c => c.status === "등록").length;
   const unk = d.consults.filter(c => !c.source).length;
   const line = (c, t, s) => `<div style="border-left:4px solid var(--${c});padding:4px 10px;margin:6px 0"><div>${t}</div><div class="m">${s}</div></div>`;
-  return `<div class="card"><b>📌 지금 상황 한눈에</b>
+  return `<div class="card"><b>지금 상황 한눈에</b>
     ${line(act.length >= prev ? "ok" : "red", `재원생 <b>${act.length}명</b> · 지난달보다 ${act.length - prev >= 0 ? "+" : ""}${act.length - prev}명`, `신규 ${joined} · 빠짐 ${gone.length}${gone.length ? " (" + gone.map(s => esc(s.name) + " " + esc(s.end_kind || s.status)).join(", ") + ")" : ""}`)}
     ${line(cm.length && reg(cm) / cm.length >= .5 ? "ok" : "gold", `${+m.slice(5)}월 상담 <b>${cm.length}건 → 등록 ${reg(cm)}명</b>`, `지난달 ${cp.length}건 → ${reg(cp)}명`)}
     ${unk ? line("gold", `유입경로 모르는 상담 <b>${unk}건</b>`, "어디서 왔는지 적어야 어느 홍보에 힘을 줄지 정할 수 있어요") : ""}</div>`;
 }
 const kpi = (t, v, sub, cls = "") => `<div class="kpi ${cls}"><span>${t}</span><b>${v}</b><small>${esc(sub)}</small></div>`;
 function monthBar(title) {
+  // 화면 제목 = 메뉴 이름 (예: '홈' → '오늘의 학원'); 숫자 같은 덧붙임은 뒤에
+  const name = (MENU.flatMap(m => m.sub).find(x => x[0] === O.tab) || [])[1];
+  if (name && ["홈", "수납 · 미납", "출결표", "강사 급여", "캘린더 · 일지", "상담", "마케팅", "돈 · 재고"].includes(title)) title = name;
+  else if (name && /^학생 \d+명$/.test(title)) title = name + ` <small class="m" style="font-size:15px;font-weight:600">${title.replace("학생 ", "")}</small>`;
   return `<div class="nav"><h1>${title}</h1><input type="month" id="om" value="${O.month}" style="width:auto;margin:0"></div>`;
 }
 function bindMonth() { const i = $("#om"); if (i) i.onchange = () => { O.month = i.value; go(O.tab); }; }
@@ -205,14 +229,14 @@ function tuitionView() {
   const late = (m < today.slice(0, 7) || (m === today.slice(0, 7) && +today.slice(8) > 1)) ? un.length : 0;   // 납부 기간 = 전달 마지막 주
   const card = r => `<div class="card inst" ${ibar(r.s.instrument)}><div class="top"><span><b>${esc(r.s.name)}</b> <span class="m">${esc(r.s.instrument)} · ${esc(tname(r.s.teacher_id))} · ${r.use ? `원비 ${won(r.fee)} − 잔액 ${won(r.use)} = <b>낼 돈 ${won(r.due)}원</b>` : won(r.fee) + "원"}</span></span>
     ${r.pay ? `<span class="tag ok">${r.pay.paid_on ? r.pay.paid_on.slice(5).replace("-", "/") + " " : ""}${esc(r.pay.method || "○")} 납부</span>` :
-      `<span class="row2" style="flex-wrap:wrap;justify-content:flex-end"><button class="btn" data-msg="${r.s.id}">📨 안내</button><input type="date" class="pd" value="${ymd(new Date())}" style="width:auto;margin:0"><button class="btn pri" data-pay="${r.s.id}" data-m="카드">카드</button><button class="btn" data-pay="${r.s.id}" data-m="이체">이체</button></span>`}</div></div>`;
+      `<span class="row2" style="flex-wrap:wrap;justify-content:flex-end"><button class="btn" data-msg="${r.s.id}">안내</button><input type="date" class="pd" value="${ymd(new Date())}" style="width:auto;margin:0"><button class="btn pri" data-pay="${r.s.id}" data-m="카드">카드</button><button class="btn" data-pay="${r.s.id}" data-m="이체">이체</button></span>`}</div></div>`;
   $("#main").innerHTML = monthBar("수납 · 미납") +
     `<div class="kpis">${kpi("청구액", won(sum(rows)) + "원", rows.length + "명")}${kpi("납부 완료", won(sum(pd)) + "원", pd.length + "명")}${kpi("미납", won(sum(un)) + "원", un.length + "명", un.length ? "red" : "")}${kpi("기한 지남", late + "명", "납부 기간: 전달 마지막 주")}</div>
      <h2 class="sec2">미납 ${un.length}명</h2>${un.map(card).join("") || '<div class="card m">없어요</div>'}
      <h2 class="sec2">납부 ${pd.length}명</h2>${pd.map(card).join("")}`;
   bindMonth();
   document.querySelectorAll("[data-msg]").forEach(b => b.onclick = () => { const r = rows.find(x => x.s.id === b.dataset.msg);
-    copyText(`안녕하세요, 비발디 관현악학원입니다 🎻\n${r.s.name} ${+m.slice(5)}월 교육비(${won(r.due)}원) 안내드려요.\n이미 납부하셨다면 이 메시지는 넘겨 주세요. 납부가 어려우시면 편하게 말씀 주세요. 감사합니다.`); });
+    copyText(`안녕하세요, 비발디 관현악학원입니다 \n${r.s.name} ${+m.slice(5)}월 교육비(${won(r.due)}원) 안내드려요.\n이미 납부하셨다면 이 메시지는 넘겨 주세요. 납부가 어려우시면 편하게 말씀 주세요. 감사합니다.`); });
   document.querySelectorAll("[data-pay]").forEach(b => b.onclick = async () => {
     const r = rows.find(x => x.s.id === b.dataset.pay), day = b.parentNode.querySelector(".pd").value;
     if (!day) return toast("납부 날짜를 골라 주세요");

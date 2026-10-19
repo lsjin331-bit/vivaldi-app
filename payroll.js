@@ -89,7 +89,7 @@ async function payrollView() {
         ${r.act ? `<div class="m">실지급 ${won(r.act.amount)}원${none ? "" : ` · <b style="color:${diff === 0 ? "var(--ok)" : "var(--red)"}">${diff === 0 ? "일치 ✓" : "차이 " + (diff > 0 ? "+" : "") + won(diff) + "원"}</b>`} ${esc(r.act.memo || "")}</div>` : ""}
         ${r.t.lines.length ? `<details><summary class="m">대강·당일 취소·체험 ${r.t.lines.length}건</summary><div class="m">${r.t.lines.map(esc).join("<br>")}</div></details>` : ""}</div>`;
     }).join("")}
-    ${pend.length ? `<div class="card" style="border-left:4px solid var(--red)"><b>💸 아직 보낼 돈 ${pend.length}건</b>${pend.map(a => `<div>${esc(tname(a.staff_id))} ${won(a.amount)}원 <span class="m">${a.month.slice(0, 7)}분 · 이체 ${esc((a.paid_month || "").slice(0, 7) || "미정")} · ${esc(a.memo || "")}</span></div>`).join("")}</div>` : ""}
+    ${pend.length ? `<div class="card" style="border-left:4px solid var(--red)"><b>아직 보낼 돈 ${pend.length}건</b>${pend.map(a => `<div>${esc(tname(a.staff_id))} ${won(a.amount)}원 <span class="m">${a.month.slice(0, 7)}분 · 이체 ${esc((a.paid_month || "").slice(0, 7) || "미정")} · ${esc(a.memo || "")}</span></div>`).join("")}</div>` : ""}
     <h2 class="sec2">원천세 신고 기록</h2>
     <div class="card">${tax.slice(0, 8).map(x => `<div>${x.paid_month.slice(0, 7)} 이체분 · ${esc(x.kind)} · ${esc(x.memo || "")}</div>`).join("") || '<div class="m">없음</div>'}
       <div class="m" style="margin-top:6px">기한: 원천세·지방소득세 다음 달 10일 · 간이지급명세서 다음 달 말일</div></div>`;

@@ -12,7 +12,7 @@ function calItems(jn, hol, day) {
   const d = O.data, out = [];
   if (hol.has(day)) out.push({ c: "hol", t: "휴강" });
   jn.filter(j => j.day === day).forEach(j => out.push({ c: j.kind === "일정" ? "plan" : j.kind === "마케팅" ? "mk" : "log", t: (j.channel ? "[" + j.channel + "] " : "") + j.content }));
-  d.consults.filter(c => c.follow_on === day && !/^(등록|미등록)$/.test(c.status || "")).forEach(c => out.push({ c: "call", t: "📞 " + c.name + " 연락" }));
+  d.consults.filter(c => c.follow_on === day && !/^(등록|미등록)$/.test(c.status || "")).forEach(c => out.push({ c: "call", t: "" + c.name + " 연락" }));
   const dd = Number(day.slice(8)), last = Number(monthEnd(day).slice(8));
   if (dd === 10) out.push({ c: "due", t: "원천세·지방세 신고" });
   if (dd === last) out.push({ c: "due", t: "간이지급명세서" });
