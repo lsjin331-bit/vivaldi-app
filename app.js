@@ -24,8 +24,9 @@ async function boot() {
   const { data: { session } } = await db.auth.getSession();
   if (!session) return loginView();
   const email = session.user.email.toLowerCase();
-  STAFF = await q(db.from("staff").select("id,name,role,instrument,email").order("sort"));
-  ME = STAFF.find(s => (s.email || "").toLowerCase() === email);
+  // 본인 줄만 전체로 읽힌다(RLS). 다른 선생님은 이름·악기만 있는 staff_names로 본다.
+  ME = (await q(db.from("staff").select("id,name,role,instrument,email").ilike("email", email)))[0];
+  STAFF = await q(db.from("staff_names").select("id,name,role,instrument").order("sort"));
   if (!ME) { $("#main").innerHTML = `<div class="warn">이 이메일(${esc(email)})은 선생님 명단에 연결되어 있지 않아요. 원장님께 알려 주세요.</div>`; showLogout(); return; }
   $("#who").textContent = ME.name + (ME.role === "teacher" ? " 선생님" : ME.role === "owner" ? " · 원장" : " · 실장");
   showLogout();
