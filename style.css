@@ -82,3 +82,32 @@ body.owner.wide main{max-width:none}
 
 .att .plan{color:#b8bec8;font-weight:400}.att td.ontrack{color:var(--ink2);background:var(--bg)}.att .sm small{display:block;font-size:9.5px;font-weight:400;color:var(--ink2)}
 .att th.out,.att td.out{background:var(--golds)}
+
+/* ── 원장 화면: 왼쪽 묶음 메뉴 + 하위 탭 (기존 운영실 앱 · Polaris · 학원 OS) ── */
+body.owner{--blue:#8a6a2c;--soft:#f3ecdd;--bg:#f6f4f0;--gold:#8a6a2c;font-family:"IBM Plex Sans KR","Malgun Gothic",sans-serif}
+@media (prefers-color-scheme:dark){body.owner:not([data-theme="light"]){--blue:#d6b46a;--soft:#3a2f17;--gold:#d6b46a}}
+body.owner .bar{display:none}
+.side{position:fixed;left:0;top:0;bottom:0;width:224px;background:var(--card);border-right:1px solid var(--line);overflow:auto;padding:18px 12px;z-index:6;display:flex;flex-direction:column}
+.sbrand{display:flex;gap:10px;align-items:center;padding:0 8px 16px}.sbrand .logo{background:var(--blue)}
+.sbrand b{font-family:"Gowun Batang",serif;letter-spacing:.08em;color:var(--blue);font-size:17px;display:block;line-height:1.1}.sbrand small{font-size:11px;color:var(--ink2)}
+.ssec{font-size:12px;color:var(--ink2);font-weight:600;padding:14px 10px 4px}
+.side button{display:block;width:100%;text-align:left;border:0;background:none;padding:8px 10px 8px 30px;border-radius:8px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
+.side button:hover{background:var(--bg)}.side button.on{background:var(--soft);color:var(--blue);font-weight:700}
+.sbig{display:none}
+.sfoot{margin-top:auto;padding:14px 8px 0;border-top:1px solid var(--line);font-size:12px;color:var(--ink2);display:flex;justify-content:space-between;align-items:center}
+.sfoot button{width:auto;padding:4px 8px;font-size:12px;color:var(--ink2)}
+.subt{margin-left:224px;display:flex;gap:4px;padding:14px 28px 0;border-bottom:1px solid var(--line);background:var(--bg);position:sticky;top:0;z-index:4;overflow-x:auto}
+.subt:empty{display:none}
+.subt button{font:inherit;font-size:14px;background:none;border:0;border-bottom:3px solid transparent;padding:8px 12px 10px;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.subt button.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+body.owner main{margin-left:224px;max-width:1100px;padding:22px 28px 70px}
+body.owner.wide main{max-width:none}
+body.owner .card{border-radius:12px;box-shadow:none}
+body.owner .kpi{border-radius:12px;padding:14px}body.owner .kpi b{font-size:24px;font-variant-numeric:tabular-nums}
+@media (max-width:899px){
+  .side{position:sticky;top:0;bottom:auto;width:auto;height:auto;flex-direction:row;align-items:center;padding:8px 10px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;gap:4px}
+  .sbrand{padding:0 8px 0 0}.sbrand div{display:none}.sgroups,.sfoot{display:none}
+  .sbig{display:flex;gap:4px}.sbig button{width:auto;white-space:nowrap;padding:8px 12px}
+  .subt{margin-left:0;padding:8px 12px 0;top:53px}
+  body.owner main{margin-left:0;padding:16px 14px 70px}
+}

@@ -6,14 +6,33 @@ const INST_ORDER = ["바이올린", "첼로", "클라리넷", "플룻", "비올�
 const thisMonth = () => ymd(new Date()).slice(0, 7);
 let O = { tab: "home", month: thisMonth(), data: null, filter: "재원", inst: "전체", sel: null };
 
-const TABS = [["home", "홈"], ["attend", "출결표"], ["students", "학생"], ["tuition", "수납"], ["consult", "상담"], ["payroll", "급여"], ["money", "돈·재고"], ["calendar", "캘린더"], ["marketing", "마케팅"], ["lessons", "수업"]];
+// 왼쪽 묶음 메뉴 + 하위 탭 (원장 결정 2026-10-20: 기존 운영실 앱 · Polaris · 학원 OS 구성)
+const MENU = [
+  { k: "home", t: "홈", i: "🏠", sub: [["home", "오늘"], ["calendar", "캘린더 · 일지"]] },
+  { k: "stu", t: "수강생", i: "🎻", sub: [["students", "학생 명부"], ["attend", "출결표"], ["tuition", "수납 · 미납"]] },
+  { k: "con", t: "상담", i: "💬", sub: [["consult", "상담 목록"]] },
+  { k: "mkt", t: "마케팅", i: "📣", sub: [["marketing", "한눈에"]] },
+  { k: "biz", t: "경영", i: "📊", sub: [["payroll", "강사 급여 · 세금"], ["money", "수입·지출 · 재고"]] },
+  { k: "cls", t: "수업", i: "📝", sub: [["lessons", "선생님 화면"]] }
+];
+const secOf = tab => MENU.find(m => m.sub.some(s => s[0] === tab)) || MENU[0];
 function ownerBoot() { ownerNav(); go(O.tab); }
 function ownerNav() {
-  let nav = $("#onav");
-  if (!nav) { nav = document.createElement("nav"); nav.id = "onav"; nav.className = "onav"; $(".bar").after(nav); }
-  nav.innerHTML = TABS.map(([k, t]) => `<button data-t="${k}" class="${O.tab === k ? "on" : ""}">${t}</button>`).join("");
-  nav.querySelectorAll("button").forEach(b => b.onclick = () => go(b.dataset.t));
   document.body.classList.add("owner");
+  let side = $("#side");
+  if (!side) {
+    side = document.createElement("aside"); side.id = "side"; side.className = "side"; document.body.prepend(side);
+    const st = document.createElement("div"); st.id = "subt"; st.className = "subt"; $("#main").before(st);
+  }
+  const sec = secOf(O.tab);
+  side.innerHTML = `<div class="sbrand"><span class="logo">V</span><div><b>VIVALDI</b><small>비발디 운영실</small></div></div>
+    <div class="sbig">${MENU.map(m => `<button data-big="${m.k}" class="${m === sec ? "on" : ""}">${m.i} ${m.t}</button>`).join("")}</div>
+    <div class="sgroups">${MENU.map(m => `<div class="ssec">${m.i} ${m.t}</div>` + m.sub.map(([k, t]) => `<button data-t="${k}" class="${O.tab === k ? "on" : ""}">${t}</button>`).join("")).join("")}</div>
+    <div class="sfoot"><span>${esc(ME ? ME.name + (ME.role === "owner" ? " · 원장" : " · 실장") : "")}</span><button id="slog">로그아웃</button></div>`;
+  $("#subt").innerHTML = sec.sub.length > 1 ? sec.sub.map(([k, t]) => `<button data-t="${k}" class="${O.tab === k ? "on" : ""}">${t}</button>`).join("") : "";
+  document.querySelectorAll("#side [data-t], #subt [data-t]").forEach(b => b.onclick = () => go(b.dataset.t));
+  side.querySelectorAll("[data-big]").forEach(b => b.onclick = () => go(MENU.find(m => m.k === b.dataset.big).sub[0][0]));
+  $("#slog").onclick = async () => { await db.auth.signOut(); location.reload(); };
 }
 async function go(tab) {
   O.tab = tab; ownerNav(); document.body.classList.toggle("wide", tab === "attend");
