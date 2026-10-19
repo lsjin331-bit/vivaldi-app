@@ -6,7 +6,7 @@ const INST_ORDER = ["바이올린", "첼로", "클라리넷", "플룻", "비올�
 const thisMonth = () => ymd(new Date()).slice(0, 7);
 let O = { tab: "home", month: thisMonth(), data: null, filter: "재원", inst: "전체", sel: null };
 
-const TABS = [["home", "홈"], ["attend", "출결표"], ["students", "학생"], ["tuition", "수납"], ["consult", "상담"], ["payroll", "급여"], ["money", "돈·재고"], ["lessons", "수업"]];
+const TABS = [["home", "홈"], ["attend", "출결표"], ["students", "학생"], ["tuition", "수납"], ["consult", "상담"], ["payroll", "급여"], ["money", "돈·재고"], ["calendar", "캘린더"], ["marketing", "마케팅"], ["lessons", "수업"]];
 function ownerBoot() { ownerNav(); go(O.tab); }
 function ownerNav() {
   let nav = $("#onav");
@@ -19,7 +19,7 @@ async function go(tab) {
   O.tab = tab; ownerNav(); document.body.classList.toggle("wide", tab === "attend");
   if (tab === "lessons") return load();          // 선생님 화면(선생님 골라 보기)
   $("#main").innerHTML = `<div class="loading">불러오는 중…</div>`;
-  try { await loadAll(); await ({ home: homeView, students: studentsView, tuition: tuitionView, attend: attendView, consult: consultView, payroll: payrollView, money: moneyView })[tab](); }
+  try { await loadAll(); await ({ home: homeView, students: studentsView, tuition: tuitionView, attend: attendView, consult: consultView, payroll: payrollView, money: moneyView, calendar: calendarView, marketing: marketingView })[tab](); }
   catch (e) { $("#main").innerHTML = `<div class="warn">불러오지 못했어요: ${esc(e.message)}</div>`; }
 }
 
@@ -131,6 +131,7 @@ function studentDetail(sid) {
       <div class="m">${esc(s.instrument || "")} · ${esc(tname(s.teacher_id))} · ${esc(s.lesson_type || "")} · ${esc(s.age_group || "")} · 학생번호 ${esc(s.id)}</div>
       ${s.memo ? `<div class="note" style="margin-top:8px">${esc(s.memo)}</div>` : ""}</div>
     <div class="card"><h2>정규 수업</h2>${slots.map(x => `<div>${"월화수목금토일"[x.weekday]} ${hm(x.start_time)} · ${x.minutes}분 · ${esc(x.room || "")} · ${x.kind} · ${esc(tname(x.teacher_id))}</div>`).join("") || '<div class="m">없음</div>'}</div>
+    ${teacherChangeCard(s)}
     <div class="card"><h2>연락처 <span class="m">(원장·실장만)</span></h2>
       <label>학생 연락처<input id="c1" value="${esc(ct.student_phone)}" inputmode="tel"></label>
       <label>보호자 이름 · 관계<div class="row2"><input id="c2" value="${esc(ct.guardian_name)}" placeholder="이름"><input id="c3" value="${esc(ct.guardian_relation)}" placeholder="관계" style="max-width:110px"></div></label>
@@ -141,6 +142,7 @@ function studentDetail(sid) {
       <div class="m" style="margin-top:6px">${m} 원비: ${feeOf(sid, m) != null ? won(feeOf(sid, m)) + "원" : "—"}</div></div>
     <div class="card"><h2>수납</h2>${pays.map(p => `<div>${p.month.slice(0, 7)} · ${esc(p.method || "○")}${p.paid_on ? " · " + p.paid_on.slice(5).replace("-", "/") : ""}${p.amount ? " · " + won(p.amount) + "원" : ""}</div>`).join("") || '<div class="m">기록 없음</div>'}</div>
     <div class="card"><h2>최근 결석·보강</h2>${ev.map(e => `<div>${label(e.event_date)} · ${esc(e.kind)} ${e.minutes || ""}분 <span class="m">${esc(e.memo || "")}</span></div>`).join("") || '<div class="m">없음</div>'}</div>`;
+  bindTeacherChange(s);
   $("#bk").onclick = () => studentsView();
   $("#csave").onclick = async e => {
     e.target.disabled = true;
@@ -178,4 +180,33 @@ function tuitionView() {
     if (error) { b.disabled = false; return toast("저장 실패: " + error.message); }
     d.pays.push(row); toast(r.s.name + " 납부 기록 완료"); tuitionView();
   });
+}
+
+// ===== 담당 선생님 변경 (적용일부터 자동) =====
+function teacherChangeCard(s) {
+  const d = O.data, ch = TCH.filter(c => c.student_id === s.id);
+  const opts = d.staff.filter(t => t.pay_kind !== undefined).map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join("");
+  return `<div class="card"><h2>담당 선생님</h2>
+    <div>오늘 담당: <b>${esc(tname(teacherOn(s, ymd(new Date()))))}</b></div>
+    ${ch.map(c => `<div class="m">${c.from_date.slice(5).replace("-", "/")}부터 ${esc(tname(c.old_teacher_id))} → <b>${esc(tname(c.new_teacher_id))}</b> ${esc(c.memo || "")}</div>`).join("")}
+    <details style="margin-top:6px"><summary class="m">담당 바꾸기</summary>
+      <div class="row2"><label style="flex:1">적용일<input id="tc1" type="date" value="${ymd(new Date())}"></label><label style="flex:1">새 담당<select id="tc2">${opts}</select></label></div>
+      <input id="tc3" placeholder="메모(선택)">
+      <p class="m">적용일부터 자동으로 바뀌는 곳: 선생님 화면 '내 수업' · 일지 현황 · 강사 급여(적용일 전 수업은 이전 선생님, 이후는 새 선생님)</p>
+      <button class="btn pri" id="tcs">변경 저장</button></details></div>`;
+}
+function bindTeacherChange(s) {
+  const b = $("#tcs"); if (!b) return;
+  b.onclick = async () => {
+    const day = $("#tc1").value, nt = $("#tc2").value;
+    if (!day || !nt) return toast("적용일과 새 담당을 골라 주세요");
+    const old = teacherOn(s, addDays(day, -1));
+    if (old === nt) return toast("이미 그 선생님 담당이에요");
+    if (!confirm(`${s.name} 담당을 ${day.slice(5).replace("-", "/")}부터 ${tname(old)} → ${tname(nt)}로 바꿀까요?`)) return;
+    b.disabled = true;
+    const { error } = await db.from("teacher_changes").insert({ student_id: s.id, from_date: day, old_teacher_id: old, new_teacher_id: nt, memo: $("#tc3").value.trim() || null });
+    b.disabled = false;
+    if (error) return toast(/teacher_changes/.test(error.message) ? "변경 이력 표가 아직 없어요(06 SQL 실행 필요)" : "저장 실패: " + error.message);
+    await loadTeacherChanges(); toast("담당 변경을 저장했어요"); studentDetail(s.id);
+  };
 }

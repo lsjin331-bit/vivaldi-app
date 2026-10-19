@@ -57,7 +57,7 @@ function todayLogsCard() {
   sids.forEach(sid => {
     const s = d.students.find(x => x.id === sid); if (!s) return;
     const cover = d.events.find(e => e.student_id === sid && e.event_date === today && e.kind.startsWith("대강"));
-    const t = tname(cover ? cover.teacher_id : s.teacher_id) || "?";
+    const t = tname(cover ? cover.teacher_id : teacherOn(s, today)) || "?";
     const done = d.logs.some(l => l.student_id === sid && l.lesson_date === today) || d.events.some(e => e.student_id === sid && e.event_date === today && e.kind.startsWith("결석"));
     byT[t] = byT[t] || { done: 0, miss: [] };
     if (done) byT[t].done++; else byT[t].miss.push(s.name);

@@ -35,13 +35,13 @@ async function payrollView() {
     if (evs.some(e => e.kind.startsWith("결석") && !e.kind.startsWith("결석 · 당일 취소"))) return;   // 이름이 남아 있어도 결석이면 0
     const cover = evs.find(e => e.kind.startsWith("대강") && e.teacher_id);
     if (cover) add(cover.teacher_id, "cover", mins, `${label(x.day)} ${s.name} ${mins}분 (대강)`);
-    else add(s.teacher_id, "normal", mins);
+    else add(teacherOn(s, x.day), "normal", mins);
   });
   // 당일 취소(보강 없음): 칸이 지워져 있어도 50% 지급
   ev.filter(e => e.form === "개인" && e.kind.startsWith("결석 · 당일 취소")).forEach(e => {
     const s = S[e.student_id]; if (!s) return;
     const mins = e.minutes || 30;
-    add(e.teacher_id || s.teacher_id, "half", mins / 2, `${label(e.event_date)} ${s.name} 당일 취소 ${mins}분 → 50%`);
+    add(e.teacher_id || teacherOn(s, e.event_date), "half", mins / 2, `${label(e.event_date)} ${s.name} 당일 취소 ${mins}분 → 50%`);
   });
 
   const staff = d.staff.filter(s => s.role !== "owner" && s.pay_kind !== "none");

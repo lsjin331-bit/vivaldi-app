@@ -8,7 +8,15 @@ const COLOR = { 바이올린: "var(--vn)", 첼로: "var(--vc)", 플룻: "var(--f
 const ABS = [["결석 · 사전 연락", "📞 미리 연락 옴", "보강 해 줘요"], ["결석 · 당일 취소(보강 없음)", "⛔ 당일 취소", "보강 없음"],
   ["결석 · 당일 예외", "🕯 당일 예외 (질병·장례)", "원장님과 상의"], ["결석 · 강사 사정·휴일", "🏫 선생님 사정 · 휴일", "보강 해 줘요"]];
 const NEEDS_MAKEUP = ["결석 · 사전 연락", "결석 · 당일 예외", "결석 · 강사 사정·휴일"];
-let ME = null, STAFF = [], cur = new Date(), DAY = null, TEACHER_FILTER = null;
+let ME = null, STAFF = [], cur = new Date(), DAY = null, TEACHER_FILTER = null, TCH = [];
+// 담당 변경 이력(teacher_changes): 그날의 담당 = 그날 이전 가장 최근 변경의 새 담당, 첫 변경 전이면 이전 담당
+async function loadTeacherChanges() { const r = await db.from("teacher_changes").select("*").order("from_date"); TCH = r.data || []; }
+function teacherOn(s, day) {
+  const ch = TCH.filter(c => c.student_id === s.id);
+  if (!ch.length) return s.teacher_id;
+  const prev = ch.filter(c => c.from_date <= day);
+  return prev.length ? prev[prev.length - 1].new_teacher_id : (ch[0].old_teacher_id || s.teacher_id);
+}
 
 function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove("show"), 2600); }
 const ymd = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
@@ -28,6 +36,7 @@ async function boot() {
   ME = (await q(db.from("staff").select("id,name,role,instrument,email").ilike("email", email)))[0];
   STAFF = await q(db.from("staff_names").select("id,name,role,instrument").order("sort"));
   if (!ME) { $("#main").innerHTML = `<div class="warn">이 이메일(${esc(email)})은 선생님 명단에 연결되어 있지 않아요. 원장님께 알려 주세요.</div>`; showLogout(); return; }
+  await loadTeacherChanges();
   $("#who").textContent = ME.name + (ME.role === "teacher" ? " 선생님" : ME.role === "owner" ? " · 원장" : " · 실장");
   showLogout();
   if (ME.role !== "teacher") { TEACHER_FILTER = TEACHER_FILTER || STAFF.find(s => s.role === "teacher")?.id || ME.id; return ownerBoot(); }
@@ -127,7 +136,7 @@ function cellLessons(cells, events, S, slots, teacherId, day) {
   return out.filter(l => {
     if (l.group) return ownerIds.has(teacherId);
     const s = S[l.sid]; if (!s) return false;
-    return (cover[l.sid] || s.teacher_id) === teacherId;
+    return (cover[l.sid] || teacherOn(s, day)) === teacherId;
   }).map(l => ({
     kind: l.group ? "그룹" : "개인", sid: l.sid, group: l.group, time: String(Math.floor(l.start / 60)).padStart(2, "0") + ":" + String(l.start % 60).padStart(2, "0"),
     min: l.explicit || l.cells * 30, room: l.room, extra: cover[l.sid] ? "대강" : null,
