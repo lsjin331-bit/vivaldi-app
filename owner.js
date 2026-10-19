@@ -29,7 +29,7 @@ async function loadAll(force) {
   if (O.data && !force && O.data.at > Date.now() - 60000) return O.data;
   const [students, staff, fees, pays, consults, events, slots, contacts, logs, todayCells] = await Promise.all([
     q(db.from("students").select("*").order("id")),
-    q(db.from("staff").select("id,name,role,instrument,pay_kind,pay_amount,sort").order("sort")),
+    q(db.from("staff").select("id,name,role,instrument,pay_kind,pay_amount,active,sort").order("sort")),
     q(db.from("fee_changes").select("*")),
     q(db.from("payments").select("*")),
     q(db.from("consults").select("*").order("asked_on", { ascending: false })),

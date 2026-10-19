@@ -81,3 +81,4 @@ body.owner.wide main{max-width:none}
 @media (max-width:520px){.cd{min-height:58px}.ci{font-size:9.5px}}
 
 .att .plan{color:#b8bec8;font-weight:400}.att td.ontrack{color:var(--ink2);background:var(--bg)}.att .sm small{display:block;font-size:9.5px;font-weight:400;color:var(--ink2)}
+.att th.out,.att td.out{background:var(--golds)}

@@ -10,6 +10,10 @@ const ABS = [["결석 · 사전 연락", "📞 미리 연락 옴", "보강 해 �
 const NEEDS_MAKEUP = ["결석 · 사전 연락", "결석 · 당일 예외", "결석 · 강사 사정·휴일"];
 let ME = null, STAFF = [], cur = new Date(), DAY = null, TEACHER_FILTER = null, TCH = [];
 // 담당 변경 이력(teacher_changes): 그날의 담당 = 그날 이전 가장 최근 변경의 새 담당, 첫 변경 전이면 이전 담당
+// 시간표 칸의 귀속월: 보관 칸은 for_month(8/31 = 9월 1회차 등), 나머지는 날짜의 달
+const cellMonth = c => c.for_month || c.lesson_date.slice(0, 7) + "-01";
+// 그 달 칸 = 날짜가 그 달이거나 귀속월이 그 달
+const monthCells = (ms, me) => db.from("timetable_cells").select("*").or(`and(lesson_date.gte.${ms},lesson_date.lte.${me}),for_month.eq.${ms}`);
 async function loadTeacherChanges() { const r = await db.from("teacher_changes").select("*").order("from_date"); TCH = r.data || []; }
 function teacherOn(s, day) {
   const ch = TCH.filter(c => c.student_id === s.id);
@@ -129,14 +133,14 @@ function cellLessons(cells, events, S, slots, teacherId, day) {
   cells.slice().sort((a, b) => (a.room || "").localeCompare(b.room || "") || toMin(a.start_time) - toMin(b.start_time)).forEach(c => {
     const key = (c.room || "") + "|" + (c.student_id || c.group_names), st = toMin(c.start_time), last = open[key];
     if (last && st === last.end) { last.end = st + 30; last.cells++; if (c.minutes !== 30) last.explicit = Math.max(last.explicit, c.minutes); return; }
-    open[key] = { sid: c.student_id, group: c.is_group ? c.group_names : null, room: c.room, start: st, end: st + 30, cells: 1, explicit: c.minutes !== 30 ? c.minutes : 0 };
+    open[key] = { sid: c.student_id, tid: c.teacher_id, group: c.is_group ? c.group_names : null, room: c.room, start: st, end: st + 30, cells: 1, explicit: c.minutes !== 30 ? c.minutes : 0 };
     out.push(open[key]);
   });
   const w = wd(day);
   return out.filter(l => {
     if (l.group) return ownerIds.has(teacherId);
     const s = S[l.sid]; if (!s) return false;
-    return (cover[l.sid] || teacherOn(s, day)) === teacherId;
+    return (cover[l.sid] || l.tid || teacherOn(s, day)) === teacherId;
   }).map(l => ({
     kind: l.group ? "그룹" : "개인", sid: l.sid, group: l.group, time: String(Math.floor(l.start / 60)).padStart(2, "0") + ":" + String(l.start % 60).padStart(2, "0"),
     min: l.explicit || l.cells * 30, room: l.room, extra: cover[l.sid] ? "대강" : null,
