@@ -72,6 +72,8 @@ async function payrollView() {
   });
   const sum = k => rows.reduce((a, r) => a + (typeof k === "function" ? k(r) : r[k]), 0);
   const today = ymd(new Date());
+  // 보낼 돈: 비고에 '예정'이 있고 '이체 완료'가 없는 실지급 줄(전체 달) — 예: 임동희 9월분 10,000원 10월 이체 예정
+  const pend = (await q(db.from("payroll_actual").select("*"))).filter(a => /예정/.test(a.memo || "") && !/이체 완료/.test(a.memo || ""));
   $("#main").innerHTML = monthBar("강사 급여") +
     `<p class="m">${m} 시간표 기준 예상 · 개인 수업만(그룹·듀오 제외) · 당일 취소 50% · 대강은 실제 수업한 선생님 · 실지급은 설정 탭 기록</p>
     <div class="kpis">${kpi("예상 합계(세전)", won(sum("pay")) + "원", "")}${kpi("3.3%", won(sum(r => r.it + r.lt)) + "원", "소득세 " + won(sum("it")) + " · 지방 " + won(sum("lt")))}
@@ -87,6 +89,7 @@ async function payrollView() {
         ${r.act ? `<div class="m">실지급 ${won(r.act.amount)}원${none ? "" : ` · <b style="color:${diff === 0 ? "var(--ok)" : "var(--red)"}">${diff === 0 ? "일치 ✓" : "차이 " + (diff > 0 ? "+" : "") + won(diff) + "원"}</b>`} ${esc(r.act.memo || "")}</div>` : ""}
         ${r.t.lines.length ? `<details><summary class="m">대강·당일 취소·체험 ${r.t.lines.length}건</summary><div class="m">${r.t.lines.map(esc).join("<br>")}</div></details>` : ""}</div>`;
     }).join("")}
+    ${pend.length ? `<div class="card" style="border-left:4px solid var(--red)"><b>💸 아직 보낼 돈 ${pend.length}건</b>${pend.map(a => `<div>${esc(tname(a.staff_id))} ${won(a.amount)}원 <span class="m">${a.month.slice(0, 7)}분 · 이체 ${esc((a.paid_month || "").slice(0, 7) || "미정")} · ${esc(a.memo || "")}</span></div>`).join("")}</div>` : ""}
     <h2 class="sec2">원천세 신고 기록</h2>
     <div class="card">${tax.slice(0, 8).map(x => `<div>${x.paid_month.slice(0, 7)} 이체분 · ${esc(x.kind)} · ${esc(x.memo || "")}</div>`).join("") || '<div class="m">없음</div>'}
       <div class="m" style="margin-top:6px">기한: 원천세·지방소득세 다음 달 10일 · 간이지급명세서 다음 달 말일</div></div>`;

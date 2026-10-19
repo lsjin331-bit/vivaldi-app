@@ -1,6 +1,6 @@
 "use strict";
 // 상담 (원장·실장 전용) — 시트 상담 탭과 같은 칸: 문의일·이름·타겟·과목·유입경로·상태·등록일·후속 연락일·메모
-const C_STATUS = ["문의", "상담", "체험", "고민 중", "등록", "미등록", "보류"];
+const C_STATUS = ["문의", "상담", "체험", "보류", "등록", "미등록"];   // 대시보드 설정 탭 '상담 상태'와 같게
 const C_SOURCE = ["네이버 일반 검색", "네이버 플레이스", "네이버 블로그", "다음", "AI", "인스타그램", "유튜브", "당근", "간판", "지인 추천", "기타"];
 const C_TARGET = ["미취학", "초등 저학년", "초등 고학년", "중학생", "고등학생", "성인"];
 let CF = "진행 중";
@@ -17,12 +17,23 @@ function consultView() {
       ${kpi("후속 연락", d.consults.filter(c => c.follow_on && c.follow_on <= today && !done(c)).length + "건", "오늘까지", "red")}
       ${kpi("유입경로", Object.keys(src).length + "종", Object.entries(src).sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0] + " " + x[1]).join(" · "))}</div>
     <div class="chips">${["진행 중", "완료", "전체"].map(v => `<button class="${CF === v ? "on" : ""}" data-cf="${v}">${v}</button>`).join("")}</div><p></p>
-    ${list.map(c => `<div class="card clickable" data-ci="${d.consults.indexOf(c)}"><div class="top"><span><b>${esc(c.name)}</b> <span class="m">${esc([c.target, c.subject, c.source].filter(Boolean).join(" · "))}</span></span>
+    ${list.map((c, i) => monthHead(list, i) + `<div class="card clickable" data-ci="${d.consults.indexOf(c)}"><div class="top"><span><b>${esc(c.name)}</b> <span class="m">${esc([c.target, c.subject, c.source].filter(Boolean).join(" · "))}</span></span>
       <span class="tag ${c.status === "등록" ? "ok" : c.follow_on && c.follow_on <= today && !done(c) ? "red" : ""}">${esc(c.status || "")}${c.follow_on && !done(c) ? " · 연락 " + c.follow_on.slice(5).replace("-", "/") : ""}</span></div>
-      <div class="m">${esc((c.asked_on || "").slice(5).replace("-", "/"))} 문의 · ${esc((c.memo || "").slice(0, 70))}${(c.memo || "").length > 70 ? "…" : ""}</div></div>`).join("") || '<div class="card m">없어요</div>'}`;
+      <div class="m">${esc((c.asked_on || "").slice(5).replace("-", "/"))} 문의</div>${timeline(c.memo)}</div>`).join("") || '<div class="card m">없어요</div>'}`;
   document.querySelectorAll("[data-cf]").forEach(b => b.onclick = () => { CF = b.dataset.cf; consultView(); });
   document.querySelectorAll("[data-ci]").forEach(c => c.onclick = () => consultForm(d.consults[+c.dataset.ci]));
   $("#cnew").onclick = () => consultForm(null);
+}
+// 달이 바뀌는 곳에 '2026년 10월 · 상담 n · 등록 n · 전환 %' 머리줄
+function monthHead(list, i) {
+  const m = (list[i].asked_on || "").slice(0, 7); if (i && (list[i - 1].asked_on || "").slice(0, 7) === m) return "";
+  const a = list.filter(c => (c.asked_on || "").startsWith(m)), r = a.filter(c => c.status === "등록").length;
+  return `<h2 class="sec2" style="border-bottom:2px solid var(--gold);padding-bottom:4px">${m ? +m.slice(0, 4) + "년 " + +m.slice(5) + "월" : "날짜 없음"} <span class="m" style="font-weight:400">· 상담 ${a.length} · 등록 ${r} · 전환 ${a.length ? Math.round(r / a.length * 100) : 0}%</span></h2>`;
+}
+// 메모의 '[10/19 19:30] 노쇼: …' 진행 기록을 시간 줄로
+function timeline(memo) {
+  if (!memo) return "";
+  return `<ul style="list-style:none;margin:6px 0 0;padding-left:10px;border-left:2px solid var(--line);font-size:13px;color:var(--ink2)">${String(memo).split(" · ").slice(0, 8).map(x => { const t = x.match(/^\[([^\]]+)\]\s*(.*)$/); return t ? `<li><b style="color:var(--gold);display:inline-block;min-width:78px">${esc(t[1])}</b>${esc(t[2])}</li>` : `<li>${esc(x)}</li>`; }).join("")}</ul>`;
 }
 function consultForm(c) {
   const v = c || { asked_on: ymd(new Date()), status: "문의" };

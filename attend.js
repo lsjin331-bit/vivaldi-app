@@ -9,6 +9,8 @@ const ABSENT_MK = ["결석 · 사전 연락", "결석 · 당일 예외", "결석
 
 async function attendView() {
   const d = O.data, m = O.month, ms = m + "-01", me = monthEnd(ms), nd = Number(me.slice(8));
+  const pmS = addDays(ms, -1).slice(0, 7) + "-01";
+  const prevNotes = Object.fromEntries((await q(db.from("month_adjust").select("student_id,memo").eq("month", pmS))).filter(x => x.memo).map(x => [x.student_id, x.memo]));
   const [cells, ev0, adj, hol] = await Promise.all([
     q(monthCells(ms, me)),
     q(db.from("attendance_events").select("*").gte("event_date", ms).lte("event_date", me)),
@@ -78,7 +80,8 @@ async function attendView() {
     const gk = gkey(r).split("|").pop();
     if (gk !== last) { body += `<tr class="grp"><td colspan="${nd + 3}">${esc(gk)}</td></tr>`; last = gk; }
     const carryTxt = r.carry ? `<small class="cy">${Number(ms.slice(5, 7)) - 1 || 12}월분 ${r.carryUsed}/${r.carry}분</small>` : "";
-    body += `<tr><td class="nm" ${ibar(r.s.instrument)}><b>${esc(r.s.name)}</b>${carryTxt}</td>` +
+    const pn = prevNotes[r.s.id], pr = pn ? ((pn.match(/잔여:\s*([^|]*)/) || [])[1] || "넘어온 수업 없음").trim() : "";
+    body += `<tr><td class="nm" ${ibar(r.s.instrument)}><b>${esc(r.s.name)}</b>${carryTxt}${pn ? `<small class="cy" title="${esc(pn)}" style="color:var(--blue)">${+pmS.slice(5, 7)}월→ ${esc(pr)}</small>` : ""}</td>` +
       r.marks.map((mk, i) => { const day = days[i], sun = new Date(day + "T00:00:00").getDay() === 0;
         return `<td class="${sun ? "sun" : ""}${holidays.has(day) ? " hol" : ""}${day < ms || day > me ? " out" : ""}">${mk.map(x => `<span class="${x.c}">${x.t}</span>`).join("")}</td>`; }).join("") +
       sum(r.p, r.pTarget, r.pp) + sum(r.g, r.gTarget, r.pg) + "</tr>";

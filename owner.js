@@ -57,6 +57,10 @@ function enrolled(s, month) {
   return s.status === "재원" || (s.end_month && s.end_month > m);
 }
 const payOf = (sid, month) => O.data.pays.find(p => p.student_id === sid && p.month === month + "-01");
+// 그 달 '잔액사용'(선납 잔액으로 낼 돈을 줄임) → 낼 돈 = 원비 − 잔액사용
+const useOf = (sid, month) => O.data.fees.filter(f => f.student_id === sid && f.kind === "잔액사용" && f.from_month === month + "-01").reduce((a, f) => a + (f.amount || 0), 0);
+const dueOf = (sid, month) => Math.max(0, (feeOf(sid, month) || 0) - useOf(sid, month));
+function copyText(t) { (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("복사했어요 · 카톡이나 문자에 붙여 넣으세요"), () => prompt("길게 눌러 복사하세요", t)); }
 const tname = id => (O.data.T[id] || {}).name || "";
 const ibar = inst => `style="--c:${COLOR[inst] || "var(--blue)"}"`;
 
@@ -64,13 +68,13 @@ const ibar = inst => `style="--c:${COLOR[inst] || "var(--blue)"}"`;
 function homeView() {
   const d = O.data, m = O.month, today = ymd(new Date());
   const act = d.students.filter(s => enrolled(s, m));
-  const due = act.map(s => ({ s, fee: feeOf(s.id, m), pay: payOf(s.id, m) })).filter(x => x.fee > 0);
+  const due = act.map(s => ({ s, fee: dueOf(s.id, m), pay: payOf(s.id, m) })).filter(x => x.fee > 0);
   const unpaid = due.filter(x => !x.pay);
   const paidSum = due.filter(x => x.pay).reduce((a, x) => a + (x.pay.amount ?? x.fee), 0);
   const cMonth = d.consults.filter(c => (c.asked_on || "").startsWith(m));
   const follow = d.consults.filter(c => c.follow_on && c.follow_on <= today && !/등록|미등록/.test(c.status || ""));
   const linked = new Set(d.events.filter(e => e.kind === "보강" && e.linked_date).map(e => e.student_id + "|" + e.linked_date));
-  const noMk = d.events.filter(e => ["결석 · 사전 연락", "결석 · 당일 예외", "결석 · 강사 사정·휴일"].includes(e.kind) && e.form === "개인" && !linked.has(e.student_id + "|" + e.event_date));
+  const noMk = d.events.filter(e => e.event_date >= m + "-01" && ["결석 · 사전 연락", "결석 · 당일 예외", "결석 · 강사 사정·휴일"].includes(e.kind) && e.form === "개인" && !linked.has(e.student_id + "|" + e.event_date));   // 정산 끝난 지난달은 빼고 이 달만
   const name = id => (d.students.find(s => s.id === id) || {}).name || id;
   const byInst = INST_ORDER.map(i => [i, act.filter(s => s.instrument === i).length]);
   $("#main").innerHTML = monthBar("홈") + `
@@ -80,6 +84,7 @@ function homeView() {
       ${kpi("미납", unpaid.length + "명", won(unpaid.reduce((a, x) => a + x.fee, 0)) + "원", unpaid.length ? "red" : "")}
       ${kpi("이달 상담", cMonth.length + "건", "등록 " + cMonth.filter(c => /등록/.test(c.status || "") && !/미등록/.test(c.status || "")).length + "건")}
     </div>
+    ${diagCard(act, m)}
     <h2 class="sec2">✅ 확인할 것</h2>
     ${todayLogsCard()}${stagnationCard()}
     ${unpaid.length ? `<div class="card clickable" data-go="tuition"><b>💳 미납 ${unpaid.length}명</b><div class="m">${unpaid.map(x => esc(x.s.name)).join(", ")}</div></div>` : ""}
@@ -88,6 +93,20 @@ function homeView() {
     ${!unpaid.length && !follow.length && !noMk.length ? `<div class="card m">오늘 확인할 것이 없어요 👍</div>` : ""}
     <p class="m" style="margin-top:14px">자료는 매일 밤 시트에서 복사돼요. 지금은 시트가 원본이라 새 앱에서 바꾼 내용은 시트에 자동으로 들어가지 않아요.</p>`;
   bindMonth(); document.querySelectorAll("[data-go]").forEach(c => c.onclick = () => go(c.dataset.go));
+}
+// 지금 상황 한 줄 진단 (기존 앱 '운영 현황'과 같은 내용): 재원 증감 · 상담→등록 · 유입경로 모름
+function diagCard(act, m) {
+  const d = O.data, pm = addDays(m + "-01", -1).slice(0, 7), prev = d.students.filter(s => enrolled(s, pm)).length;
+  const joined = act.filter(s => (s.start_month || "").startsWith(m)).length;
+  const gone = d.students.filter(s => enrolled(s, pm) && !enrolled(s, m));
+  const cs = mm => d.consults.filter(c => (c.asked_on || "").startsWith(mm) && !c.with_name);
+  const cm = cs(m), cp = cs(pm), reg = a => a.filter(c => c.status === "등록").length;
+  const unk = d.consults.filter(c => !c.source).length;
+  const line = (c, t, s) => `<div style="border-left:4px solid var(--${c});padding:4px 10px;margin:6px 0"><div>${t}</div><div class="m">${s}</div></div>`;
+  return `<div class="card"><b>📌 지금 상황 한눈에</b>
+    ${line(act.length >= prev ? "ok" : "red", `재원생 <b>${act.length}명</b> · 지난달보다 ${act.length - prev >= 0 ? "+" : ""}${act.length - prev}명`, `신규 ${joined} · 빠짐 ${gone.length}${gone.length ? " (" + gone.map(s => esc(s.name) + " " + esc(s.end_kind || s.status)).join(", ") + ")" : ""}`)}
+    ${line(cm.length && reg(cm) / cm.length >= .5 ? "ok" : "gold", `${+m.slice(5)}월 상담 <b>${cm.length}건 → 등록 ${reg(cm)}명</b>`, `지난달 ${cp.length}건 → ${reg(cp)}명`)}
+    ${unk ? line("gold", `유입경로 모르는 상담 <b>${unk}건</b>`, "어디서 왔는지 적어야 어느 홍보에 힘을 줄지 정할 수 있어요") : ""}</div>`;
 }
 const kpi = (t, v, sub, cls = "") => `<div class="kpi ${cls}"><span>${t}</span><b>${v}</b><small>${esc(sub)}</small></div>`;
 function monthBar(title) {
@@ -161,19 +180,24 @@ function tuitionView() {
   const d = O.data, m = O.month;
   const rows = d.students.filter(s => enrolled(s, m)).map(s => ({ s, fee: feeOf(s.id, m), pay: payOf(s.id, m) })).filter(x => x.fee > 0)
     .sort((a, b) => (a.pay ? 1 : 0) - (b.pay ? 1 : 0) || INST_ORDER.indexOf(a.s.instrument) - INST_ORDER.indexOf(b.s.instrument) || (a.s.name < b.s.name ? -1 : 1));
+  rows.forEach(r => { r.use = useOf(r.s.id, m); r.due = dueOf(r.s.id, m); });
   const un = rows.filter(r => !r.pay), pd = rows.filter(r => r.pay);
-  const card = r => `<div class="card inst" ${ibar(r.s.instrument)}><div class="top"><span><b>${esc(r.s.name)}</b> <span class="m">${esc(r.s.instrument)} · ${esc(tname(r.s.teacher_id))} · ${won(r.fee)}원</span></span>
+  const sum = a => a.reduce((x, r) => x + r.due, 0), today = ymd(new Date());
+  const late = (m < today.slice(0, 7) || (m === today.slice(0, 7) && +today.slice(8) > 1)) ? un.length : 0;   // 납부 기간 = 전달 마지막 주
+  const card = r => `<div class="card inst" ${ibar(r.s.instrument)}><div class="top"><span><b>${esc(r.s.name)}</b> <span class="m">${esc(r.s.instrument)} · ${esc(tname(r.s.teacher_id))} · ${r.use ? `원비 ${won(r.fee)} − 잔액 ${won(r.use)} = <b>낼 돈 ${won(r.due)}원</b>` : won(r.fee) + "원"}</span></span>
     ${r.pay ? `<span class="tag ok">${r.pay.paid_on ? r.pay.paid_on.slice(5).replace("-", "/") + " " : ""}${esc(r.pay.method || "○")} 납부</span>` :
-      `<span class="row2" style="flex-wrap:nowrap"><input type="date" class="pd" value="${ymd(new Date())}" style="width:auto;margin:0"><button class="btn pri" data-pay="${r.s.id}" data-m="카드">카드</button><button class="btn" data-pay="${r.s.id}" data-m="이체">이체</button></span>`}</div></div>`;
+      `<span class="row2" style="flex-wrap:wrap;justify-content:flex-end"><button class="btn" data-msg="${r.s.id}">📨 안내</button><input type="date" class="pd" value="${ymd(new Date())}" style="width:auto;margin:0"><button class="btn pri" data-pay="${r.s.id}" data-m="카드">카드</button><button class="btn" data-pay="${r.s.id}" data-m="이체">이체</button></span>`}</div></div>`;
   $("#main").innerHTML = monthBar("수납 · 미납") +
-    `<p class="m">${m} 수강료 · 납부 ${pd.length}/${rows.length}명 · 미납 ${won(un.reduce((a, r) => a + r.fee, 0))}원</p>
+    `<div class="kpis">${kpi("청구액", won(sum(rows)) + "원", rows.length + "명")}${kpi("납부 완료", won(sum(pd)) + "원", pd.length + "명")}${kpi("미납", won(sum(un)) + "원", un.length + "명", un.length ? "red" : "")}${kpi("기한 지남", late + "명", "납부 기간: 전달 마지막 주")}</div>
      <h2 class="sec2">미납 ${un.length}명</h2>${un.map(card).join("") || '<div class="card m">없어요</div>'}
      <h2 class="sec2">납부 ${pd.length}명</h2>${pd.map(card).join("")}`;
   bindMonth();
+  document.querySelectorAll("[data-msg]").forEach(b => b.onclick = () => { const r = rows.find(x => x.s.id === b.dataset.msg);
+    copyText(`안녕하세요, 비발디 관현악학원입니다 🎻\n${r.s.name} ${+m.slice(5)}월 교육비(${won(r.due)}원) 안내드려요.\n이미 납부하셨다면 이 메시지는 넘겨 주세요. 납부가 어려우시면 편하게 말씀 주세요. 감사합니다.`); });
   document.querySelectorAll("[data-pay]").forEach(b => b.onclick = async () => {
     const r = rows.find(x => x.s.id === b.dataset.pay), day = b.parentNode.querySelector(".pd").value;
     if (!day) return toast("납부 날짜를 골라 주세요");
-    if (!confirm(`${r.s.name} ${m} 수강료 ${won(r.fee)}원\n${Number(day.slice(5, 7))}월 ${Number(day.slice(8))}일 ${b.dataset.m} 납부로 기록할까요?`)) return;
+    if (!confirm(`${r.s.name} ${m} 수강료 ${won(r.due)}원\n${Number(day.slice(5, 7))}월 ${Number(day.slice(8))}일 ${b.dataset.m} 납부로 기록할까요?`)) return;
     b.disabled = true;
     const row = { student_id: r.s.id, month: m + "-01", method: b.dataset.m, paid_on: day, source_kind: "app", memo: "새 앱 기록" };
     const { error } = await db.from("payments").insert(row);
