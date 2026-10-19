@@ -144,7 +144,7 @@ function render() {
   if (d.holiday) h += `<div class="note">🏖 ${esc(d.holiday)} — 정규 수업이 없는 날이에요.</div>`;
   if (!d.list.length) h += `<div class="card m">이 날은 내 수업이 없어요.</div>`;
   d.list.forEach((l, i) => {
-    const st = l.recs.length ? `<span class="tag ${l.recs.some(r => r.startsWith("결석")) ? "red" : "blue"}">${esc(l.recs.join(", "))}</span>` : l.log ? `<span class="tag ok">일지 완료</span>` : "";
+    const st = (l.recs.length ? `<span class="tag ${l.recs.some(r => r.startsWith("결석")) ? "red" : "blue"}">${esc(l.recs.join(", "))}</span> ` : "") + (l.log ? `<span class="tag ok">일지 완료</span>` : "");
     const cnt = l.target ? ` · ${new Date(d.day).getMonth() + 1}월 ${l.nth}/${l.target}회` : "";
     h += `<div class="card inst" style="--c:${COLOR[l.instrument] || "var(--blue)"}"><div class="top"><span><b>${esc(l.time)} ${esc(l.name)}</b> <span class="m">${l.min}분${l.kind !== "개인" ? " · " + l.kind : ""}${cnt}</span></span>${st}</div>
       ${l.open.length && !l.regular ? `<div class="note" style="margin:8px 0 0">🔁 보강 수업 같아요 · ${label(l.open[0].event_date)} 결석분</div>` : ""}
