@@ -165,7 +165,7 @@ function logForm(l) {
   const g = l.log || {};
   $("#main").innerHTML = head(l, "레슨일지") +
     `<label>곡·교재${!g.piece && l.lastPiece ? ' <span class="m">(지난번 그대로)</span>' : ""}<input id="piece" value="${esc(g.piece || l.lastPiece)}"></label>
-    <label>오늘 한 것 <span class="m">(무엇을, 어떻게)</span><textarea id="today" rows="3" placeholder="예) 사단조 3악장 포지션 이동 → 메트로놈 60으로 4마디씩 끊어서 음정 맞추기">${esc(g.today)}</textarea></label>
+    <label>오늘 한 것 <span class="m">(무엇을, 어떻게)</span><textarea id="today" rows="3" placeholder="• 사단조 3악장: 포지션 이동 음정, 메트로놈 60으로 4마디씩&#10;• 컨트리댄스: 활 힘 빼고 가볍게">${esc(g.today)}</textarea></label>
     <label>숙제 <span class="m">(선택)</span><input id="hw" value="${esc(g.homework)}" placeholder="원장님이 내주시면 비워 두세요"></label>
     <div class="chips"><button type="button" id="cb" class="${g.new_book ? "on" : ""}">📕 새 교재</button><button type="button" id="cv" class="${g.video_song ? "on" : ""}">🎥 촬영함</button><button type="button" id="ct" class="${g.talk ? "on" : ""}">💬 원장님 상담 요청</button></div>
     <div id="xb"><label>📕 어떤 교재를 줬나요?<input id="book" value="${esc(g.new_book)}" placeholder="예) 스즈키 바이올린 2권"></label></div>
@@ -174,6 +174,7 @@ function logForm(l) {
     ${l.open.length && !l.regular ? `<label class="ck"><input type="checkbox" id="mkc" checked> 🔁 <b>보강으로 기록</b> · ${label(l.open[0].event_date)} 결석분 ${l.min}분</label>` : ""}
     <p style="margin-top:14px"><button class="btn pri" id="save" style="width:100%">저장</button></p><p class="m">🎥 촬영한 영상은 원장님께 보내 주세요.</p></div>`;
   $("#bk").onclick = back;
+  bulletize($("#today"), () => $("#piece").value);
   [["#cb", "#xb"], ["#cv", "#xv"], ["#ct", "#xt"]].forEach(([b, x]) => {
     const show = () => $(x).style.display = $(b).classList.contains("on") ? "block" : "none";
     $(b).onclick = () => { $(b).classList.toggle("on"); show(); }; show();
@@ -201,6 +202,12 @@ async function addEvent(l, kind, extra = {}) {
   return q(db.from("attendance_events").insert({ event_date: DAY.day, start_time: l.time || null, student_id: l.sid, kind, minutes: extra.minutes || l.min,
     form: l.kind || "개인", teacher_id: ME.role === "teacher" ? ME.id : TEACHER_FILTER, created_by: ME.id, for_month: forMonth,
     linked_date: extra.linked_date || null, memo: extra.memo || null, source_kind: "app" }));
+}
+
+// '오늘 한 것' 곡별 • 글머리: 비어 있을 때 누르면 곡마다 '• 곡: ' 미리 채움, 엔터 → 다음 줄 '• '
+function bulletize(ta, pieces) {
+  ta.addEventListener("focus", () => { if (ta.value.trim()) return; const ps = String(pieces() || "").split(/[/,·]/).map(x => x.trim()).filter(Boolean); ta.value = ps.length ? ps.map(x => "• " + x + ": ").join("\n") : "• "; });
+  ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); const p = ta.selectionStart; ta.value = ta.value.slice(0, p) + "\n• " + ta.value.slice(ta.selectionEnd); ta.selectionStart = ta.selectionEnd = p + 3; } });
 }
 
 // ===== 결석 =====

@@ -6,7 +6,7 @@ const INST_ORDER = ["바이올린", "첼로", "클라리넷", "플룻", "비올�
 const thisMonth = () => ymd(new Date()).slice(0, 7);
 let O = { tab: "home", month: thisMonth(), data: null, filter: "재원", inst: "전체", sel: null };
 
-const TABS = [["home", "홈"], ["attend", "출결표"], ["students", "학생"], ["tuition", "수납"], ["lessons", "수업"]];
+const TABS = [["home", "홈"], ["attend", "출결표"], ["students", "학생"], ["tuition", "수납"], ["consult", "상담"], ["lessons", "수업"]];
 function ownerBoot() { ownerNav(); go(O.tab); }
 function ownerNav() {
   let nav = $("#onav");
@@ -19,7 +19,7 @@ async function go(tab) {
   O.tab = tab; ownerNav(); document.body.classList.toggle("wide", tab === "attend");
   if (tab === "lessons") return load();          // 선생님 화면(선생님 골라 보기)
   $("#main").innerHTML = `<div class="loading">불러오는 중…</div>`;
-  try { await loadAll(); await ({ home: homeView, students: studentsView, tuition: tuitionView, attend: attendView })[tab](); }
+  try { await loadAll(); await ({ home: homeView, students: studentsView, tuition: tuitionView, attend: attendView, consult: consultView })[tab](); }
   catch (e) { $("#main").innerHTML = `<div class="warn">불러오지 못했어요: ${esc(e.message)}</div>`; }
 }
 
@@ -27,7 +27,7 @@ async function go(tab) {
 async function loadAll(force) {
   // (출결표는 달마다 따로 읽음: attendView)
   if (O.data && !force && O.data.at > Date.now() - 60000) return O.data;
-  const [students, staff, fees, pays, consults, events, slots, contacts] = await Promise.all([
+  const [students, staff, fees, pays, consults, events, slots, contacts, logs, todayCells] = await Promise.all([
     q(db.from("students").select("*").order("id")),
     q(db.from("staff").select("id,name,role,instrument,pay_kind,pay_amount,sort").order("sort")),
     q(db.from("fee_changes").select("*")),
@@ -35,10 +35,12 @@ async function loadAll(force) {
     q(db.from("consults").select("*").order("asked_on", { ascending: false })),
     q(db.from("attendance_events").select("*").gte("event_date", addDays(ymd(new Date()), -60))),
     q(db.from("regular_slots").select("*")),
-    db.from("contacts").select("*").then(r => r.data || [])     // 05 SQL 실행 전이면 빈 목록
+    db.from("contacts").select("*").then(r => r.data || []),    // 05 SQL 실행 전이면 빈 목록
+    q(db.from("lesson_logs").select("lesson_date,student_id,teacher_id,piece").gte("lesson_date", addDays(ymd(new Date()), -120)).order("lesson_date", { ascending: false })),
+    q(db.from("timetable_cells").select("lesson_date,student_id,is_group,start_time").eq("lesson_date", ymd(new Date())))
   ]);
   const T = Object.fromEntries(staff.map(s => [s.id, s]));
-  O.data = { students, staff, T, fees, pays, consults, events, slots, contacts, at: Date.now() };
+  O.data = { students, staff, T, fees, pays, consults, events, slots, contacts, logs, todayCells, at: Date.now() };
   return O.data;
 }
 // 그 달 원비: 적용월이 그 달 이전인 '원비변경' 중 가장 최근
@@ -79,6 +81,7 @@ function homeView() {
       ${kpi("이달 상담", cMonth.length + "건", "등록 " + cMonth.filter(c => /등록/.test(c.status || "") && !/미등록/.test(c.status || "")).length + "건")}
     </div>
     <h2 class="sec2">✅ 확인할 것</h2>
+    ${todayLogsCard()}${stagnationCard()}
     ${unpaid.length ? `<div class="card clickable" data-go="tuition"><b>💳 미납 ${unpaid.length}명</b><div class="m">${unpaid.map(x => esc(x.s.name)).join(", ")}</div></div>` : ""}
     ${follow.length ? `<div class="card"><b>📞 상담 후속 연락 ${follow.length}건</b><div class="m">${follow.map(c => esc(c.name) + " (" + c.follow_on.slice(5).replace("-", "/") + ")").join(", ")}</div></div>` : ""}
     ${noMk.length ? `<div class="card"><b>🔁 보강 날짜 없는 결석 ${noMk.length}건</b><div class="m">${noMk.map(e => esc(name(e.student_id)) + " " + label(e.event_date)).join(", ")}</div></div>` : ""}
