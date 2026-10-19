@@ -165,8 +165,8 @@ function logForm(l) {
   const g = l.log || {};
   $("#main").innerHTML = head(l, "레슨일지") +
     `<label>곡·교재${!g.piece && l.lastPiece ? ' <span class="m">(지난번 그대로)</span>' : ""}<input id="piece" value="${esc(g.piece || l.lastPiece)}"></label>
-    <label>오늘 한 것<input id="today" value="${esc(g.today)}" placeholder="예) 활 각도, 4마디까지"></label>
-    <label>숙제<input id="hw" value="${esc(g.homework)}" placeholder="예) 3~4마디 하루 10번"></label>
+    <label>오늘 한 것 <span class="m">(무엇을, 어떻게)</span><textarea id="today" rows="3" placeholder="예) 사단조 3악장 포지션 이동 → 메트로놈 60으로 4마디씩 끊어서 음정 맞추기">${esc(g.today)}</textarea></label>
+    <label>숙제 <span class="m">(선택)</span><input id="hw" value="${esc(g.homework)}" placeholder="원장님이 내주시면 비워 두세요"></label>
     <div class="chips"><button type="button" id="cb" class="${g.new_book ? "on" : ""}">📕 새 교재</button><button type="button" id="cv" class="${g.video_song ? "on" : ""}">🎥 촬영함</button><button type="button" id="ct" class="${g.talk ? "on" : ""}">💬 원장님 상담 요청</button></div>
     <div id="xb"><label>📕 어떤 교재를 줬나요?<input id="book" value="${esc(g.new_book)}" placeholder="예) 스즈키 바이올린 2권"></label></div>
     <div id="xv"><label>🎥 어떤 곡을 찍었나요?<input id="vsong" value="${esc(g.video_song)}" placeholder="예) 스즈키 2권 가보트"></label></div>
