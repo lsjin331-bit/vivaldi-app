@@ -65,10 +65,11 @@ async function load() {
   const valid = (s, d) => (!s.valid_from || s.valid_from <= d) && (!s.valid_to || s.valid_to >= d);
   const mySlots = slots.filter(s => s.teacher_id === teacherId && S[s.student_id] && S[s.student_id].status === "재원");
 
-  // 이 날 정규 수업 + 이 날 보강·대강 기록
-  const list = [];
-  if (!holidays.has(day)) mySlots.filter(s => s.weekday === wd(day) && valid(s, day)).forEach(s => list.push({ kind: s.kind, sid: s.student_id, time: hm(s.start_time), min: s.minutes, room: s.room, regular: true }));
-  events.filter(e => e.event_date === day && (e.kind === "보강" || e.kind.startsWith("대강") || e.kind === "체험") && (e.teacher_id === teacherId))
+  // 전환 기간: 그날 시트 시간표 칸이 있으면 그 칸을 그대로 쓴다(기존 선생님 링크와 같은 목록).
+  const cells = await q(db.from("timetable_cells").select("*").eq("lesson_date", day).order("start_time"));
+  const list = cells.length ? cellLessons(cells, events, S, slots, teacherId, day) : [];
+  if (!cells.length && !holidays.has(day)) mySlots.filter(s => s.weekday === wd(day) && valid(s, day)).forEach(s => list.push({ kind: s.kind, sid: s.student_id, time: hm(s.start_time), min: s.minutes, room: s.room, regular: true }));
+  if (!cells.length) events.filter(e => e.event_date === day && (e.kind === "보강" || e.kind.startsWith("대강") || e.kind === "체험") && (e.teacher_id === teacherId))
     .forEach(e => { if (!list.some(l => l.sid === e.student_id && !l.regular && l.ev === e.id)) list.push({ kind: e.form, sid: e.student_id, time: hm(e.start_time) || "", min: e.minutes || 30, extra: e.kind, ev: e.id }); });
   list.sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
 
@@ -86,7 +87,7 @@ async function load() {
   };
   list.forEach(l => {
     const s = S[l.sid] || {};
-    l.name = s.name || "?"; l.instrument = s.instrument;
+    l.name = l.group || s.name || "?"; l.instrument = s.instrument;
     l.recs = events.filter(e => e.student_id === l.sid && e.event_date === day && e.kind !== "보강" && !e.kind.startsWith("대강") && e.kind !== "체험").map(e => e.kind);
     if (l.extra) l.recs.unshift(l.extra.startsWith("대강") ? "대강" : l.extra);
     l.log = logs.find(g => g.student_id === l.sid && g.lesson_date === day);
@@ -108,6 +109,30 @@ async function load() {
   }
   DAY = { day, today, list, missing, holiday: holidays.has(day) ? (hol.find(h => h.day === day).memo || "휴강일") : "" };
   render();
+}
+// 시간표 칸 → 수업: 같은 방에서 이어지는 같은 학생 칸을 한 수업으로 합친다(기존 선생님 링크와 같은 규칙)
+function cellLessons(cells, events, S, slots, teacherId, day) {
+  const toMin = t => { const [h, m] = hm(t).split(":").map(Number); return h * 60 + m; };
+  const cover = {};
+  events.filter(e => e.event_date === day && e.kind.startsWith("대강") && e.teacher_id).forEach(e => cover[e.student_id] = e.teacher_id);
+  const ownerIds = new Set(STAFF.filter(s => s.role === "owner").map(s => s.id));
+  const open = {}, out = [];
+  cells.slice().sort((a, b) => (a.room || "").localeCompare(b.room || "") || toMin(a.start_time) - toMin(b.start_time)).forEach(c => {
+    const key = (c.room || "") + "|" + (c.student_id || c.group_names), st = toMin(c.start_time), last = open[key];
+    if (last && st === last.end) { last.end = st + 30; last.cells++; if (c.minutes !== 30) last.explicit = Math.max(last.explicit, c.minutes); return; }
+    open[key] = { sid: c.student_id, group: c.is_group ? c.group_names : null, room: c.room, start: st, end: st + 30, cells: 1, explicit: c.minutes !== 30 ? c.minutes : 0 };
+    out.push(open[key]);
+  });
+  const w = wd(day);
+  return out.filter(l => {
+    if (l.group) return ownerIds.has(teacherId);
+    const s = S[l.sid]; if (!s) return false;
+    return (cover[l.sid] || s.teacher_id) === teacherId;
+  }).map(l => ({
+    kind: l.group ? "그룹" : "개인", sid: l.sid, group: l.group, time: String(Math.floor(l.start / 60)).padStart(2, "0") + ":" + String(l.start % 60).padStart(2, "0"),
+    min: l.explicit || l.cells * 30, room: l.room, extra: cover[l.sid] ? "대강" : null,
+    regular: slots.some(x => x.student_id === l.sid && x.weekday === w)
+  })).sort((a, b) => a.time.localeCompare(b.time));
 }
 function addDays(s, n) { const d = new Date(s + "T00:00:00"); d.setDate(d.getDate() + n); return ymd(d); }
 
