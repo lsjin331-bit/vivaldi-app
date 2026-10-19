@@ -17,6 +17,7 @@ async function attendView() {
   ]);
   const holidays = new Set(hol.map(h => h.day));
   const A = Object.fromEntries(adj.map(a => [a.student_id, a]));
+  const TODAY = ymd(new Date());
   const studs = d.students.filter(s => enrolled(s, m) || cells.some(c => c.student_id === s.id));
   // 그룹 칸의 짧은 이름(예: '예섬') → 학생 (이름 끝 두 글자가 유일할 때만)
   const short = {};
@@ -30,14 +31,15 @@ async function attendView() {
     const memoN = Number(((a.memo || "").match(/월\s*(\d+)회/) || [])[1]);
     const pTarget = a.regular_count || memoN || (/주\s*2회|8회/.test(s.lesson_type || "") ? 8 : 4);
     const gTarget = /그룹|듀오/.test(s.lesson_type || "") || d.slots.some(x => x.student_id === s.id && x.kind !== "개인") ? 4 : 0;
-    let p = 0, g = 0, carryUsed = 0;
+    let p = 0, g = 0, carryUsed = 0, pp = 0, pg = 0;   // pp·pg = 오늘 이후 예정
     const marks = days.map(day => {
-      const out = [];
+      const out = [], future = day > TODAY;
       const myCells = cells.filter(c => c.lesson_date === day && c.student_id === s.id);
       const evs = ev.filter(e => e.student_id === s.id && e.event_date === day);
       const absP = evs.find(e => e.form === "개인" && e.kind.startsWith("결석"));
       const mkPrev = evs.filter(e => e.kind === "보강" && e.form === "개인" && e.for_month && e.for_month < ms);
-      if (myCells.length && !absP) {
+      if (future && myCells.length && !absP) { const ex = myCells.filter(c => c.minutes !== 30).map(c => c.minutes); pp += (ex.length ? Math.max(...ex) : myCells.length * 30) / per; out.push({ t: "·", c: "plan" }); }
+      else if (myCells.length && !absP) {
         const ex = myCells.filter(c => c.minutes !== 30).map(c => c.minutes);
         let mins = ex.length ? Math.max(...ex) : myCells.length * 30;
         mkPrev.forEach(e => { const cm = Math.min(mins, e.minutes || per); mins -= cm; carryUsed += cm; out.push({ t: Number(e.for_month.slice(5, 7)) + "월", c: "prev" }); });
@@ -49,11 +51,12 @@ async function attendView() {
       // 그룹·듀오
       const gc = cells.filter(c => c.lesson_date === day && c.is_group && (c.group_names || "").split(/\s+/).some(n => n === s.name || short[n] === s.id));
       const absG = evs.find(e => e.form !== "개인" && e.kind.startsWith("결석"));
-      if (gc.length && !absG) { g += 1; out.push({ t: CIRC(g), c: "g" }); }
+      if (gc.length && !absG && future) { pg += 1; out.push({ t: "·", c: "plan" }); }
+      else if (gc.length && !absG) { g += 1; out.push({ t: CIRC(g), c: "g" }); }
       else if (absG) out.push({ t: "결", c: "a" });
       return out;
     });
-    return { s, marks, p, g, pTarget, gTarget, carry: a.carry_minutes || 0, carryUsed, per, teacher: tname(s.teacher_id) };
+    return { s, marks, p, g, pp, pg, pTarget, gTarget, carry: a.carry_minutes || 0, carryUsed, per, teacher: tname(s.teacher_id) };
   });
   const gkey = r => r.teacher === "원장" ? "0|원장 수업" : "1|" + String(INST_ORDER.indexOf(r.s.instrument)).padStart(2, "0") + "|" + r.s.instrument + " · " + r.teacher;
   rows.sort((a, b) => gkey(a) < gkey(b) ? -1 : gkey(a) > gkey(b) ? 1 : (a.s.name < b.s.name ? -1 : 1));
@@ -62,7 +65,7 @@ async function attendView() {
     const dt = new Date(day + "T00:00:00"), sun = dt.getDay() === 0;
     return `<th class="${sun ? "sun" : ""}${holidays.has(day) ? " hol" : ""}">${Number(day.slice(8))}<br><small>${"일월화수목금토"[dt.getDay()]}</small></th>`;
   }).join("");
-  const sum = (n, t) => !t ? `<td class="sm na">—</td>` : `<td class="sm ${n >= t - 1e-9 ? "full" : "short"}">${fmtN(n)}/${t}${n >= t - 1e-9 ? " ✔" : ""}</td>`;
+  const sum = (n, t, f) => !t ? `<td class="sm na">—</td>` : `<td class="sm ${n >= t - 1e-9 ? "full" : n + f >= t - 1e-9 ? "ontrack" : "short"}">${fmtN(n)}/${t}${n >= t - 1e-9 ? " ✔" : ""}${f ? `<small>+${fmtN(f)} 예정</small>` : ""}</td>`;
   let body = "", last = "";
   rows.forEach(r => {
     const gk = gkey(r).split("|").pop();
@@ -71,10 +74,10 @@ async function attendView() {
     body += `<tr><td class="nm" ${ibar(r.s.instrument)}><b>${esc(r.s.name)}</b>${carryTxt}</td>` +
       r.marks.map((mk, i) => { const day = days[i], sun = new Date(day + "T00:00:00").getDay() === 0;
         return `<td class="${sun ? "sun" : ""}${holidays.has(day) ? " hol" : ""}">${mk.map(x => `<span class="${x.c}">${x.t}</span>`).join("")}</td>`; }).join("") +
-      sum(r.p, r.pTarget) + sum(r.g, r.gTarget) + "</tr>";
+      sum(r.p, r.pTarget, r.pp) + sum(r.g, r.gTarget, r.pg) + "</tr>";
   });
   $("#main").innerHTML = monthBar("출결표") +
-    `<p class="m">금색 숫자 개인 회차 · 초록 ①② 그룹 · <span class="x">✕</span> 당일 취소 · <span class="a">결</span> 결석(보강 필요) · 파란 숫자 보강 · 청록 대강 · '9월' 지난달분 · 빗금 휴강일</p>
+    `<p class="m">금색 숫자 개인 회차 · 초록 ①② 그룹 · <span class="x">✕</span> 당일 취소 · <span class="a">결</span> 결석(보강 필요) · 파란 숫자 보강 · 청록 대강 · '9월' 지난달분 · 빗금 휴강일 · 회색 · 앞으로 예정(아직 안 셈) · 오른쪽: 한 것/목표 (+예정)</p>
      <div class="attwrap"><table class="att"><thead><tr><th class="nm">학생</th>${head}<th class="sm">개인</th><th class="sm">그룹</th></tr></thead><tbody>${body}</tbody></table></div>`;
   bindMonth();
 }
