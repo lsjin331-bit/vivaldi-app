@@ -6,7 +6,7 @@ const INST_ORDER = ["바이올린", "첼로", "클라리넷", "플룻", "비올�
 const thisMonth = () => ymd(new Date()).slice(0, 7);
 let O = { tab: "home", month: thisMonth(), data: null, filter: "재원", inst: "전체", sel: null };
 
-const TABS = [["home", "홈"], ["attend", "출결표"], ["students", "학생"], ["tuition", "수납"], ["consult", "상담"], ["lessons", "수업"]];
+const TABS = [["home", "홈"], ["attend", "출결표"], ["students", "학생"], ["tuition", "수납"], ["consult", "상담"], ["payroll", "급여"], ["money", "돈·재고"], ["lessons", "수업"]];
 function ownerBoot() { ownerNav(); go(O.tab); }
 function ownerNav() {
   let nav = $("#onav");
@@ -19,7 +19,7 @@ async function go(tab) {
   O.tab = tab; ownerNav(); document.body.classList.toggle("wide", tab === "attend");
   if (tab === "lessons") return load();          // 선생님 화면(선생님 골라 보기)
   $("#main").innerHTML = `<div class="loading">불러오는 중…</div>`;
-  try { await loadAll(); await ({ home: homeView, students: studentsView, tuition: tuitionView, attend: attendView, consult: consultView })[tab](); }
+  try { await loadAll(); await ({ home: homeView, students: studentsView, tuition: tuitionView, attend: attendView, consult: consultView, payroll: payrollView, money: moneyView })[tab](); }
   catch (e) { $("#main").innerHTML = `<div class="warn">불러오지 못했어요: ${esc(e.message)}</div>`; }
 }
 
