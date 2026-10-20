@@ -11,7 +11,7 @@ let O = { tab: "home", month: thisMonth(), data: null, filter: "재원", inst: "
 const MENU = [
   { k: "ops", t: "대시보드", sub: [["home", "오늘의 학원", "dashboard"], ["overview", "운영 현황", "money"], ["calendar", "일정 · 업무 일지", "calendar"]] },
   { k: "stu", t: "원생", sub: [["students", "원생 관리", "students"], ["attend", "출결 관리", "attendance"], ["lessons", "수업 · 레슨 일지", "classes"]] },
-  { k: "fee", t: "수납", sub: [["tuition", "수업료 · 미납", "fees"]] },
+  { k: "fee", t: "수납 · 소통", sub: [["tuition", "수업료 · 미납", "fees"], ["notify", "알림 · 발송", "workflow"]] },
   { k: "grow", t: "성장", sub: [["consult", "상담 CRM", "crm"], ["marketing", "마케팅", "content"]] },
   { k: "fin", t: "재무 · 인사", sub: [["payroll", "강사 급여 · 원천세", "payroll"], ["money", "수입 · 지출 · 재고", "money"]] }
 ];
@@ -25,7 +25,8 @@ const ICON = {   // ARCO 선 아이콘 (24px 기준)
   crm: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3.1 5.2 2 2 0 0 1 5.1 3h3l2 5-2.1 2.1a16 16 0 0 0 5.9 5.9L16 14Z"/>',
   content: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 7h10M7 11h10M7 15h6"/>',
   payroll: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6M16 11h6"/>',
-  money: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>'
+  money: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>',
+  workflow: '<rect x="8" y="2" width="8" height="6" rx="1"/><rect x="2" y="16" width="8" height="6" rx="1"/><rect x="14" y="16" width="8" height="6" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/>'
 };
 const ico = n => `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n] || ""}</svg>`;
 const secOf = tab => MENU.find(m => m.sub.some(s => s[0] === tab)) || MENU[0];
@@ -56,7 +57,7 @@ async function go(tab) {
   if (tab === "lessons") return load();          // 선생님 화면(선생님 골라 보기)
   $("#main").innerHTML = `<div class="loading">불러오는 중…</div>`;
   try { await loadAll(); // 화면 함수는 이름으로 찾음(다른 파일이 아직 안 읽혔을 때 '정의되지 않음' 오류가 나지 않게, 잠깐 기다렸다 다시 찾음)
-    const fn = { home: "homeView", overview: "overviewView", students: "studentsView", tuition: "tuitionView", attend: "attendView", consult: "consultView", payroll: "payrollView", money: "moneyView", calendar: "calendarView", marketing: "marketingView" }[tab];
+    const fn = { home: "homeView", overview: "overviewView", notify: "notifyView", students: "studentsView", tuition: "tuitionView", attend: "attendView", consult: "consultView", payroll: "payrollView", money: "moneyView", calendar: "calendarView", marketing: "marketingView" }[tab];
     for (let i = 0; i < 20 && typeof window[fn] !== "function"; i++) await new Promise(r => setTimeout(r, 100));
     await window[fn](); }
   catch (e) { $("#main").innerHTML = `<div class="warn">불러오지 못했어요: ${esc(e.message)}</div>`; }
