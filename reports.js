@@ -50,7 +50,7 @@ async function reportsView() {
     c.querySelector("[data-cp]").onclick = () => copyText(msg(s, read(c)));
     c.querySelector("[data-ai]").onclick = async e => {
       const x = read(c), f = facts(s), b = e.target; b.disabled = true; b.textContent = "만드는 중…";
-      const ctx = { name: s.name, instrument: s.instrument, age: s.age_group, month: m, lessons: f.n, absences: f.abs, pieces: f.pieces, videos: f.vids, ratings: x.r, status: x.st,
+      const ctx = { instrument: s.instrument, age: s.age_group, month: m, lessons: f.n, absences: f.abs, pieces: f.pieces, videos: f.vids, ratings: x.r, status: x.st,
         notes: logs.filter(l => l.student_id === s.id).map(l => l.today).filter(Boolean).slice(-4) };
       let text = "";
       try { const r = await db.functions.invoke("ai-draft", { body: { kind: "report", ctx } }); if (r.error) throw r.error; text = (r.data || {}).text || ""; } catch (err) { text = ""; }
