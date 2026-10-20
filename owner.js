@@ -10,9 +10,9 @@ let O = { tab: "home", month: thisMonth(), data: null, filter: "재원", inst: "
 // 메뉴: 업무 단위로 묶음 → 화면 (ARCO 구성 · 선 아이콘)
 const MENU = [
   { k: "ops", t: "대시보드", sub: [["home", "오늘의 학원", "dashboard"], ["overview", "운영 현황", "money"], ["calendar", "일정 · 업무 일지", "calendar"]] },
-  { k: "stu", t: "원생", sub: [["students", "원생 관리", "students"], ["attend", "출결 관리", "attendance"], ["lessons", "수업 · 레슨 일지", "classes"]] },
+  { k: "stu", t: "원생", sub: [["students", "원생 관리", "students"], ["attend", "출결 관리", "attendance"], ["schedule", "수업 · 시간표", "classes"], ["lessons", "레슨 일지", "homework"], ["reports", "월말 리포트", "report"]] },
   { k: "fee", t: "수납 · 소통", sub: [["tuition", "수업료 · 미납", "fees"], ["notify", "알림 · 발송", "workflow"]] },
-  { k: "grow", t: "성장", sub: [["consult", "상담 CRM", "crm"], ["marketing", "마케팅", "content"]] },
+  { k: "grow", t: "성장", sub: [["consult", "상담 CRM", "crm"], ["marketing", "마케팅", "spark"]] },
   { k: "fin", t: "재무 · 인사", sub: [["payroll", "강사 급여 · 원천세", "payroll"], ["money", "수입 · 지출 · 재고", "money"]] }
 ];
 const ICON = {   // ARCO 선 아이콘 (24px 기준)
@@ -26,6 +26,9 @@ const ICON = {   // ARCO 선 아이콘 (24px 기준)
   content: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 7h10M7 11h10M7 15h6"/>',
   payroll: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6M16 11h6"/>',
   money: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>',
+  homework: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 3H20v19H6.5A2.5 2.5 0 0 1 4 19.5v-14A2.5 2.5 0 0 1 6.5 3Z"/><path d="M8 7h8M8 11h6"/>',
+  report: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 7h10M7 11h10M7 15h6"/>',
+  spark: '<path d="m12 3 1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8Z"/>',
   workflow: '<rect x="8" y="2" width="8" height="6" rx="1"/><rect x="2" y="16" width="8" height="6" rx="1"/><rect x="14" y="16" width="8" height="6" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/>'
 };
 const ico = n => `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n] || ""}</svg>`;
@@ -57,7 +60,7 @@ async function go(tab) {
   if (tab === "lessons") return load();          // 선생님 화면(선생님 골라 보기)
   $("#main").innerHTML = `<div class="loading">불러오는 중…</div>`;
   try { await loadAll(); // 화면 함수는 이름으로 찾음(다른 파일이 아직 안 읽혔을 때 '정의되지 않음' 오류가 나지 않게, 잠깐 기다렸다 다시 찾음)
-    const fn = { home: "homeView", overview: "overviewView", notify: "notifyView", students: "studentsView", tuition: "tuitionView", attend: "attendView", consult: "consultView", payroll: "payrollView", money: "moneyView", calendar: "calendarView", marketing: "marketingView" }[tab];
+    const fn = { home: "homeView", overview: "overviewView", notify: "notifyView", schedule: "scheduleView", reports: "reportsView", students: "studentsView", tuition: "tuitionView", attend: "attendView", consult: "consultView", payroll: "payrollView", money: "moneyView", calendar: "calendarView", marketing: "marketingView" }[tab];
     for (let i = 0; i < 20 && typeof window[fn] !== "function"; i++) await new Promise(r => setTimeout(r, 100));
     await window[fn](); }
   catch (e) { $("#main").innerHTML = `<div class="warn">불러오지 못했어요: ${esc(e.message)}</div>`; }

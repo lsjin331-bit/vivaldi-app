@@ -156,3 +156,13 @@ body.owner .tag{border-radius:5px;font-size:11px;font-weight:700}
 .ph-top{display:flex;gap:8px;align-items:center;background:#fff;padding:10px 12px}.ph-top small{display:block;font-size:10px;color:#8791a2}.ph-av{width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700}
 .ph-body{padding:14px 12px;min-height:220px}.ph-msg{background:#fee500;border-radius:12px;padding:12px;font-size:12.5px;line-height:1.6;color:#3c3a2a}
 @media (max-width:1100px){.ntg{grid-template-columns:1fr}}
+
+/* 수업 · 시간표 */
+.scg{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:10px;min-width:820px}.sch{font-weight:700;color:#596881;padding:4px 2px 8px;border-bottom:2px solid var(--line);margin-bottom:6px}
+.scc{border-left:3px solid var(--blue);background:#fafbfd;border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:12.5px;line-height:1.45}.scc small{font-size:10.5px}
+/* 월말 리포트 */
+.rpi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 14px;margin-top:10px}.rpi>div{display:flex;justify-content:space-between;align-items:center;gap:6px}.rpi small{font-size:12px;color:#596881;font-weight:600}
+.rpi span{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}.rpi button{border:0;background:#fff;font:inherit;font-size:11.5px;padding:4px 9px;color:#8791a2;cursor:pointer}
+.rpi button.lv0{background:#eaf7f2;color:#22947a;font-weight:700}.rpi button.lv1{background:#edf3ff;color:var(--blue);font-weight:700}.rpi button.lv2{background:#fff4f6;color:#b6536b;font-weight:700}
+.rp.rpdone{border-color:#cfeadd}
+@media (max-width:899px){.rpi{grid-template-columns:1fr}}
