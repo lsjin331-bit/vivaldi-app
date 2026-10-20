@@ -79,6 +79,7 @@ async function payrollView() {
     <div class="kpis">${kpi("예상 합계(세전)", won(sum("pay")) + "원", "")}${kpi("3.3%", won(sum(r => r.it + r.lt)) + "원", "소득세 " + won(sum("it")) + " · 지방 " + won(sum("lt")))}
       ${kpi("실지급 합계", won(sum(r => r.act ? r.act.amount : 0)) + "원", rows.filter(r => r.act).length + "/" + rows.length + "명 입력")}
       ${kpi("이체할 금액", won(sum("pay") - sum(r => r.it + r.lt)) + "원", "예상 기준")}</div>
+    ${await holdCard()}
     ${me >= today ? '<div class="note">이번 달은 아직 끝나지 않아서, 남은 날짜는 시간표에 적힌 수업까지 포함한 예상이에요.</div>' : ""}
     ${rows.map(r => {
       const none = r.st.pay_kind === "none", diff = r.act && !none ? r.act.amount - r.pay : null;
@@ -94,4 +95,15 @@ async function payrollView() {
     <div class="card">${tax.slice(0, 8).map(x => `<div>${x.paid_month.slice(0, 7)} 이체분 · ${esc(x.kind)} · ${esc(x.memo || "")}</div>`).join("") || '<div class="m">없음</div>'}
       <div class="m" style="margin-top:6px">기한: 원천세·지방소득세 다음 달 10일 · 간이지급명세서 다음 달 말일</div></div>`;
   bindMonth();
+}
+
+// 선생님 일지 미입력 → 강사료에 반영되지 않음(시간표 목록 AM3, 매시간 계산). 일지를 쓰면 다시 인정. 열어 주기는 기존 운영실 앱 강사 급여 화면에서
+async function holdCard() {
+  const r = ((await db.from("settings").select("value").eq("key", "teacher_rules")).data || [])[0];
+  const hold = (r && r.value && r.value.hold) || [];
+  if (!hold.length) return "";
+  const by = {};
+  hold.forEach(x => { const h = by[x.t] = by[x.t] || { n: 0, min: 0, list: [] }; h.n++; h.min += x.min || 30; h.list.push(`${label(x.d)} ${esc(x.s)} ${x.min || 30}분`); });
+  return `<div class="card" style="border-left:4px solid var(--red)"><h2>선생님 일지 미입력으로 강사료에 반영되지 않음</h2><p class="m">수업 당일 밤 10:30까지 일지가 없는 수업(결석으로 간주). 일지를 다시 열어 주기는 기존 운영실 앱 › 강사 급여에서.</p>
+    ${Object.keys(by).map(t => `<div style="margin-top:8px"><b>${esc(t)} ${by[t].n}건 · ${by[t].min}분 · ${won(by[t].min * 500)}원 빠짐</b><div class="m">${by[t].list.join(" / ")}</div></div>`).join("")}</div>`;
 }

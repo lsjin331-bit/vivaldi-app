@@ -166,3 +166,17 @@ body.owner .tag{border-radius:5px;font-size:11px;font-weight:700}
 .rpi button.lv0{background:#eaf7f2;color:#22947a;font-weight:700}.rpi button.lv1{background:#edf3ff;color:var(--blue);font-weight:700}.rpi button.lv2{background:#fff4f6;color:#b6536b;font-weight:700}
 .rp.rpdone{border-color:#cfeadd}
 @media (max-width:899px){.rpi{grid-template-columns:1fr}}
+
+/* 선생님 화면 · 2026-10-20 일지 규칙 (교재·곡·내용 줄, 촬영 불, 안내) */
+.film{font-size:13px;color:#c0392b;background:#fde8e6;border-radius:10px;padding:6px 10px;margin:8px 0}
+.film.y{color:#8a5a00;background:#fff4d6}
+.srow{border:1px solid var(--line,#e5e2dc);border-radius:12px;padding:8px;margin:6px 0}
+.srow2{display:flex;gap:6px}
+.srow2 input{margin:0}
+.srow .sname{flex:1}.srow .sbook{flex:0 0 38%}.srow .sdel{flex:0 0 auto;padding:6px 10px}
+.srow textarea{margin:6px 0 0}
+.srow input::placeholder,.srow textarea::placeholder{font-size:12px}
+.hwin::placeholder{font-size:11px}
+.lbl{font-size:14px;margin:10px 0 4px}
+.notice{font-size:13px;line-height:1.6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .film{background:#3a1f27;color:#f2a9b6}:root:not([data-theme="light"]) .film.y{background:#3a2f17;color:#f0cf86}}

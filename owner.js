@@ -167,6 +167,12 @@ async function autoChecks() {
   if (miss.length) items.push(["시간표", `정규 수업인데 시간표·기록에 없음 ${miss.length}건 (지난 7일)`, miss.join(", ")]);
   const odd = [...new Set(cells.filter(c => c.lesson_date >= today && !c.is_group && (!c.student_id || (S[c.student_id] && S[c.student_id].status !== "재원"))).map(c => `${label(c.lesson_date)} ${esc(c.student_id ? S[c.student_id].name + "(" + S[c.student_id].status + ")" : (c.raw_text || "").replace(/\(.*$/, ""))}`))];
   if (odd.length) items.push(["시간표", `앞으로 시간표에 명부에 없거나 휴원·퇴원인 이름 ${odd.length}건`, odd.join(", ")]);
+  // 선생님 일지의 '새 교재'·'원장님 상담 요청' (최근 14일) — 원장 2026-10-20: 교재비 안내·면담
+  const lg14 = await q(db.from("lesson_logs").select("lesson_date,student_id,teacher_id,new_book,talk").gte("lesson_date", addDays(today, -14)).or("new_book.not.is.null,talk.not.is.null"));
+  const lgl = (k) => lg14.filter(x => x[k] && !/^(교재|상담)$/.test(x[k])).sort((a, b) => a.lesson_date < b.lesson_date ? 1 : -1).map(x => `[${esc(tname(x.teacher_id))}] ${label(x.lesson_date)} ${esc((S[x.student_id] || {}).name || "")}: ${esc(x[k])}`);
+  const bk = lgl("new_book"), tk = lgl("talk");
+  if (bk.length) items.push(["교재", `선생님이 새 교재를 줬어요 ${bk.length}건 (교재비 안내)`, bk.join("<br>")]);
+  if (tk.length) items.push(["상담", `선생님 면담 요청 ${tk.length}건`, tk.join("<br>")]);
   el.innerHTML = items.length ? `<div class="card"><b>자동 대조 · 어긋난 곳 ${items.length}가지</b> <span class="m">${a && a.at ? "시간표 알림 " + esc(a.at) + " 기준" : ""}</span>
     ${items.map(([k, t, x]) => `<div style="margin-top:10px"><span class="tag">${k}</span> <b>${t}</b><div class="m" style="margin-top:2px">${x}</div></div>`).join("")}</div>` : "";
 }
@@ -230,6 +236,7 @@ function studentDetail(sid) {
       <div class="m">${esc(s.instrument || "")} · ${esc(tname(s.teacher_id))} · ${esc(s.lesson_type || "")} · ${esc(s.age_group || "")} · 학생번호 ${esc(s.id)}</div>
       ${s.memo ? `<div class="note" style="margin-top:8px">${esc(s.memo)}</div>` : ""}</div>
     <div class="card"><h2>정규 수업</h2>${slots.map(x => `<div>${"월화수목금토일"[x.weekday]} ${hm(x.start_time)} · ${x.minutes}분 · ${esc(x.room || "")} · ${x.kind} · ${esc(tname(x.teacher_id))}</div>`).join("") || '<div class="m">없음</div>'}</div>
+    <div id="filmc"></div>
     ${teacherChangeCard(s)}
     <div class="card"><h2>연락처 <span class="m">(원장·실장만)</span></h2>
       <label>학생 연락처<input id="c1" value="${esc(ct.student_phone)}" inputmode="tel"></label>
@@ -243,6 +250,7 @@ function studentDetail(sid) {
     <div class="card"><h2>최근 결석·보강</h2>${ev.map(e => `<div>${label(e.event_date)} · ${esc(e.kind)} ${e.minutes || ""}분 <span class="m">${esc(e.memo || "")}</span></div>`).join("") || '<div class="m">없음</div>'}</div>`;
   bindTeacherChange(s);
   $("#bk").onclick = () => studentsView();
+  filmCard(s).then(h => { const el = $("#filmc"); if (el) el.outerHTML = h; }).catch(() => {});
   $("#csave").onclick = async e => {
     e.target.disabled = true;
     const row = { student_id: sid, student_phone: $("#c1").value.trim() || null, guardian_name: $("#c2").value.trim() || null, guardian_relation: $("#c3").value.trim() || null,
@@ -313,4 +321,16 @@ function bindTeacherChange(s) {
     if (error) return toast(/teacher_changes/.test(error.message) ? "변경 이력 표가 아직 없어요(06 SQL 실행 필요)" : "저장 실패: " + error.message);
     await loadTeacherChanges(); toast("담당 변경을 저장했어요"); studentDetail(s.id);
   };
+}
+
+// 영상 촬영(선생님 앱 규칙): 마지막 촬영 +4주 노란불, +5주 빨간불. 예외·담당·날짜 고치기는 같이 쓰는 기간엔 기존 운영실 앱 학생 화면에서
+async function filmCard(s) {
+  const r = ((await db.from("settings").select("value").eq("key", "teacher_rules")).data || [])[0];
+  const f = ((r && r.value && r.value.film) || []).find(x => x.name === s.name) || {};
+  const lg = (await q(db.from("lesson_logs").select("lesson_date").eq("student_id", s.id).not("video_song", "is", null).order("lesson_date", { ascending: false }).limit(1)))[0];
+  const last = [f.last || "", lg ? lg.lesson_date : ""].sort().pop(), today = ymd(new Date());
+  const dd = last ? Math.round((new Date(today + "T00:00:00") - new Date(last + "T00:00:00")) / 864e5) : null;
+  const st = /제외/.test(f.by || "") ? `<span class="tag">촬영 예외</span> ${esc(f.memo || "")}` : /원장/.test(f.by || "") ? `<span class="tag">원장 그룹 촬영</span>` : !last ? `<span style="color:var(--red)">마지막 촬영 날짜 모름</span>` :
+    `마지막 촬영 ${label(last)} · ${Math.floor(dd / 7) + 1}주차${dd >= 35 ? ' <b style="color:var(--red)">빨간불</b>' : dd >= 28 ? ' <b style="color:var(--gold)">노란불</b>' : ""}`;
+  return `<div class="card"><h2>영상 촬영</h2><p>${st}${f.later ? `<br><span class="m">${esc(f.later.plan)} 촬영 예정으로 미룸 · ${esc(f.later.why)}</span>` : ""}</p><p class="m">예외·담당·날짜 고치기: 기존 운영실 앱 › 학생 화면</p></div>`;
 }
