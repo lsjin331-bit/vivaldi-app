@@ -144,14 +144,16 @@ function cellLessons(cells, events, S, slots, teacherId, day) {
   const cover = {};
   events.filter(e => e.event_date === day && e.kind.startsWith("대강") && e.teacher_id).forEach(e => cover[e.student_id] = e.teacher_id);
   const ownerIds = new Set(STAFF.filter(s => s.role === "owner").map(s => s.id));
-  const open = {}, out = [];
+  const open = {}; let out = [];
   cells.slice().sort((a, b) => (a.room || "").localeCompare(b.room || "") || toMin(a.start_time) - toMin(b.start_time)).forEach(c => {
     const key = (c.room || "") + "|" + (c.student_id || c.group_names), st = toMin(c.start_time), last = open[key];
     if (last && st === last.end) { last.end = st + 30; last.cells++; if (c.minutes !== 30) last.explicit = Math.max(last.explicit, c.minutes); return; }
-    open[key] = { sid: c.student_id, tid: c.teacher_id, group: c.is_group ? c.group_names : null, room: c.room, start: st, end: st + 30, cells: 1, explicit: c.minutes !== 30 ? c.minutes : 0 };
+    open[key] = { sid: c.student_id, tid: c.teacher_id, group: c.is_group ? c.group_names : null, room: c.room, start: st, end: st + 30, cells: 1, explicit: c.minutes !== 30 ? c.minutes : 0, shoot: /촬영/.test(c.raw_text || "") };
     out.push(open[key]);
   });
   const w = wd(day);
+  // 촬영 자리(이름(촬영)만 있는 칸)는 같은 날 그 학생의 다른 수업이 있으면 수업이 아님
+  out = out.filter(l => !l.shoot || l.group || !out.some(o => o !== l && o.sid === l.sid && !o.shoot));
   return out.filter(l => {
     if (l.group) return ownerIds.has(teacherId);
     const s = S[l.sid]; if (!s) return false;
