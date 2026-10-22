@@ -57,10 +57,9 @@ function ownerNav() {
 }
 async function go(tab) {
   O.tab = tab; ownerNav(); document.body.classList.toggle("wide", tab === "attend");
-  if (tab === "lessons") return load();          // 선생님 화면(선생님 골라 보기)
   $("#main").innerHTML = `<div class="loading">불러오는 중…</div>`;
   try { await loadAll(); // 화면 함수는 이름으로 찾음(다른 파일이 아직 안 읽혔을 때 '정의되지 않음' 오류가 나지 않게, 잠깐 기다렸다 다시 찾음)
-    const fn = { home: "homeView", overview: "overviewView", notify: "notifyView", schedule: "scheduleView", reports: "reportsView", students: "studentsView", tuition: "tuitionView", attend: "attendView", consult: "consultView", payroll: "payrollView", money: "moneyView", calendar: "calendarView", marketing: "marketingView" }[tab];
+    const fn = { home: "homeView", overview: "overviewView", notify: "notifyView", schedule: "scheduleView", reports: "reportsView", lessons: "lessonLogView", students: "studentsView", tuition: "tuitionView", attend: "attendView", consult: "consultView", payroll: "payrollView", money: "moneyView", calendar: "calendarView", marketing: "marketingView" }[tab];
     for (let i = 0; i < 20 && typeof window[fn] !== "function"; i++) await new Promise(r => setTimeout(r, 100));
     await window[fn](); }
   catch (e) { $("#main").innerHTML = `<div class="warn">불러오지 못했어요: ${esc(e.message)}</div>`; }

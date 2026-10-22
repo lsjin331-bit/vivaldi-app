@@ -180,3 +180,14 @@ body.owner .tag{border-radius:5px;font-size:11px;font-weight:700}
 .lbl{font-size:14px;margin:10px 0 4px}
 .notice{font-size:13px;line-height:1.6}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .film{background:#3a1f27;color:#f2a9b6}:root:not([data-theme="light"]) .film.y{background:#3a2f17;color:#f0cf86}}
+
+/* 원장 · 레슨 일지 모아보기 (2026-10-22) */
+.lgsrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:7px 0;border-top:1px solid var(--line)}
+.lgd{min-width:64px;color:var(--ink2);font-size:13px}
+.lgday{font-size:15px;margin:18px 0 6px;color:var(--ink2)}
+.lgi{margin-bottom:8px}.lgsp{border-left:4px solid var(--blue)}
+.lgh{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.lgt{color:var(--ink2);font-size:13px;min-width:44px}.lgn{font-size:16px;min-width:64px}
+.lgbs{margin:6px 0 2px}
+.lgb{display:inline-block;font-size:12px;border-radius:99px;padding:2px 9px;margin:2px 4px 2px 0;background:var(--soft);color:var(--ink)}
+.lgb.bk{background:var(--golds);color:var(--gold)}.lgb.up{background:var(--oks);color:var(--ok)}.lgb.vd{background:var(--soft);color:var(--blue)}.lgb.tk{background:var(--reds);color:var(--red)}
+.lgp{margin-top:6px;font-size:14px}.lgc{margin-top:4px;font-size:13px;line-height:1.55;word-break:keep-all}
