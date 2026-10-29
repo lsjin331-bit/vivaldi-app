@@ -1,0 +1,1 @@
+window.APP_CFG={url:"https://ogwgwowturpyeingazyf.supabase.co",key:"sb_publishable_xW69nBeBhCQRwqgbUeTcgw_37s5DxHM"};
